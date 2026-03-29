@@ -35,17 +35,19 @@ export function createPropagator(categorizedData) {
       if (sat.launchDate) {
         launchYear = parseInt(sat.launchDate.substring(0, 4)) || 0;
       }
-      allSats.push({ sat, category: cat, index: i, launchYear });
+      allSats.push({ sat, category: cat, index: i, launchYear, country: sat.country || '' });
     }
   }
 
   let keyframeTimeA = 0;
   let keyframeTimeB = 0;
 
-  // Year filter: null = show all, number = only show objects launched <= that year
-  let yearFilter = null;
-  // Per-object visibility mask based on year filter
-  const visibleMask = {}; // category -> Uint8Array
+  // Filters
+  let yearFilter = null;    // null = show all, number = only show objects launched <= that year
+  let countryFilter = null; // null = show all, Set = only show objects with country in set
+
+  // Per-object visibility mask
+  const visibleMask = {};
   for (const cat of categories) {
     visibleMask[cat] = new Uint8Array((categorizedData[cat] || []).length).fill(1);
   }
@@ -93,6 +95,8 @@ export function createPropagator(categorizedData) {
   function propagateInto(targetBuffers, date) {
     const gmst = satellite.gstime(date);
     for (const entry of allSats) {
+      // Skip propagation for objects hidden by filters
+      if (hasActiveFilters() && !visibleMask[entry.category][entry.index]) continue;
       propagateSingle(entry, date, gmst, targetBuffers);
     }
   }
@@ -105,7 +109,7 @@ export function createPropagator(categorizedData) {
     }
     keyframeTimeA = date.getTime();
     keyframeTimeB = date.getTime();
-    applyYearFilter();
+    applyFilters();
   }
 
   function propagateNext(date) {
@@ -127,7 +131,7 @@ export function createPropagator(categorizedData) {
       : 1;
 
     // Skip only if t is truly identical (e.g. paused)
-    if (t === lastT && yearFilter === null) return false;
+    if (t === lastT && !hasActiveFilters()) return false;
     lastT = t;
 
     for (const cat of categories) {
@@ -137,8 +141,8 @@ export function createPropagator(categorizedData) {
       const mask = visibleMask[cat];
       const len = a.length;
 
-      // Fast path: no year filter active, skip mask check
-      if (yearFilter === null) {
+      // Fast path: no filters active, skip mask check
+      if (!hasActiveFilters()) {
         for (let i = 0; i < len; i++) {
           out[i] = a[i] + (b[i] - a[i]) * t;
         }
@@ -159,29 +163,58 @@ export function createPropagator(categorizedData) {
     return true;
   }
 
-  function applyYearFilter() {
-    if (yearFilter === null) {
-      // Show all
+  function applyFilters() {
+    const hasYear = yearFilter !== null;
+    const hasCountry = countryFilter !== null;
+
+    if (!hasYear && !hasCountry) {
       for (const cat of categories) {
         visibleMask[cat].fill(1);
       }
     } else {
       for (const entry of allSats) {
-        const { category, index, launchYear } = entry;
-        // Show if launched on or before the selected year
-        // Hide objects without launch data when filtering (only ~1.8% of catalog)
-        visibleMask[category][index] = (launchYear > 0 && launchYear <= yearFilter) ? 1 : 0;
+        const { category, index, launchYear, country } = entry;
+        let visible = true;
+
+        if (hasYear) {
+          visible = launchYear > 0 && launchYear <= yearFilter;
+        }
+        if (visible && hasCountry) {
+          const group = countryFilter.lookup.get(country);
+          if (group) {
+            visible = countryFilter.groups.has(group);
+          } else {
+            // Not in any named group — visible only if "OTHER" is selected
+            visible = countryFilter.groups.has('OTHER');
+          }
+        }
+
+        visibleMask[category][index] = visible ? 1 : 0;
       }
     }
   }
 
   function setYearFilter(year) {
     yearFilter = year;
-    applyYearFilter();
+    applyFilters();
+  }
+
+  function setCountryFilter(filter) {
+    // filter: null (show all) or { groups: Set of group codes, lookup: Map of country→group }
+    countryFilter = filter;
+    applyFilters();
   }
 
   function getYearFilter() {
     return yearFilter;
+  }
+
+  function getCountryFilter() {
+    return countryFilter;
+  }
+
+  function hasActiveFilters() {
+    return yearFilter !== null || countryFilter !== null;
   }
 
   function getFilteredCounts() {
@@ -207,8 +240,8 @@ export function createPropagator(categorizedData) {
   }
 
   function getCounts() {
-    return yearFilter !== null ? getFilteredCounts() : { ...counts };
+    return hasActiveFilters() ? getFilteredCounts() : { ...counts };
   }
 
-  return { propagateAll, propagateNext, interpolate, getPositionBuffers, getAltitudes, getCounts, setYearFilter, getYearFilter };
+  return { propagateAll, propagateNext, interpolate, getPositionBuffers, getAltitudes, getCounts, setYearFilter, getYearFilter, setCountryFilter, getCountryFilter };
 }

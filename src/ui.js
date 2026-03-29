@@ -322,6 +322,92 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   hud.appendChild(createDivider());
 
+  // ── Country filter ────────────────────────────────────────────────────────
+  const COUNTRY_OPTIONS = [
+    { code: 'US', label: 'United States', aliases: ['US', 'USA'] },
+    { code: 'CIS', label: 'Russia / CIS', aliases: ['CIS', 'RUS'] },
+    { code: 'PRC', label: 'China', aliases: ['PRC'] },
+    { code: 'UK', label: 'United Kingdom', aliases: ['UK', 'United Kingdom'] },
+    { code: 'JPN', label: 'Japan', aliases: ['JPN'] },
+    { code: 'IND', label: 'India', aliases: ['IND'] },
+    { code: 'FR', label: 'France', aliases: ['FR'] },
+    { code: 'ESA', label: 'ESA', aliases: ['ESA'] },
+  ];
+
+  // Build a lookup: country string → group code
+  const countryToGroup = new Map();
+  for (const opt of COUNTRY_OPTIONS) {
+    for (const alias of opt.aliases) {
+      countryToGroup.set(alias, opt.code);
+    }
+  }
+
+  hud.appendChild(sectionLabel('Country'));
+
+  const countryActiveSet = new Set(); // which country groups are toggled ON
+  function applyCountryFilter() {
+    if (!propagator) return;
+
+    if (countryActiveSet.size === 0) {
+      propagator.setCountryFilter(null);
+    } else {
+      // Pass group codes + lookup to propagator — it matches against its own country data
+      propagator.setCountryFilter({ groups: countryActiveSet, lookup: countryToGroup });
+    }
+    updateCountsInternal(propagator.getCounts());
+  }
+
+  const countryRows = [];
+
+  for (const opt of [...COUNTRY_OPTIONS, { code: 'OTHER', label: 'Other' }]) {
+    const row = document.createElement('div');
+    baseStyle(row);
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '8px';
+    row.style.cursor = 'pointer';
+    row.style.padding = '2px 0';
+    row.style.fontSize = '11px';
+    row.style.transition = 'opacity 0.15s';
+    row.style.opacity = '0.5';
+
+    const check = document.createElement('span');
+    check.style.display = 'inline-block';
+    check.style.width = '8px';
+    check.style.height = '8px';
+    check.style.border = '1px solid rgba(255,255,255,0.3)';
+    check.style.borderRadius = '2px';
+    check.style.flexShrink = '0';
+    check.style.transition = 'all 0.15s';
+
+    const lbl = document.createElement('span');
+    lbl.textContent = opt.label;
+
+    row.appendChild(check);
+    row.appendChild(lbl);
+    hud.appendChild(row);
+    countryRows.push({ row, check, code: opt.code });
+
+    let on = false;
+    row.addEventListener('click', () => {
+      on = !on;
+      if (on) {
+        countryActiveSet.add(opt.code);
+        check.style.background = '#00e5ff';
+        check.style.borderColor = '#00e5ff';
+        row.style.opacity = '1';
+      } else {
+        countryActiveSet.delete(opt.code);
+        check.style.background = 'transparent';
+        check.style.borderColor = 'rgba(255,255,255,0.3)';
+        row.style.opacity = '0.5';
+      }
+      applyCountryFilter();
+    });
+  }
+
+  hud.appendChild(createDivider());
+
   // ── Total count ────────────────────────────────────────────────────────────
   const totalDiv = document.createElement('div');
   baseStyle(totalDiv);

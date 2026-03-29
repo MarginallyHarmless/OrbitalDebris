@@ -48,33 +48,38 @@ async function boot() {
   }
 
   state.dataSource = catalogData.source || 'UNKNOWN';
+  state._catalogData = catalogData;
   updateProgress(0.9, 'PROPAGATING ORBITS...');
 
+  // Yield to let the browser paint the progress update before heavy work
+  await new Promise(r => setTimeout(r, 0));
+
   // 4. Create propagator and run initial propagation
-  const propagator = createPropagator(catalogData);
-  propagator.propagateAll(state.simTime);
+  let propagator, particleSystems, ui, kessler, tooltip;
+  try {
+    propagator = createPropagator(catalogData);
+    propagator.propagateAll(state.simTime);
 
-  // 5. Store counts
-  state.counts = propagator.getCounts();
+    state.counts = propagator.getCounts();
+    updateProgress(0.95, 'INITIALIZING RENDERER...');
+    await new Promise(r => setTimeout(r, 0));
 
-  updateProgress(0.95, 'INITIALIZING RENDERER...');
+    particleSystems = createParticleSystems(propagator, scene);
 
-  // 6. Create particle systems
-  const particleSystems = createParticleSystems(propagator, scene);
+    ui = createUI(state, particleSystems, controls, propagator);
+    ui.updateCounts(state.counts);
+    ui.updateTime(state.simTime);
 
-  // 7. Create UI
-  const ui = createUI(state, particleSystems, controls, propagator);
-  ui.updateCounts(state.counts);
-  ui.updateTime(state.simTime);
+    kessler = createKesslerOverlay(scene);
+    kessler.updateDensity(propagator.getAltitudes());
 
-  // 8. Create Kessler overlay
-  const kessler = createKesslerOverlay(scene);
-  kessler.updateDensity(propagator.getAltitudes());
+    tooltip = createTooltip(camera, scene, particleSystems, catalogData);
+  } catch (err) {
+    console.error('Initialization error:', err);
+    updateProgress(0, 'INIT FAILED — CHECK CONSOLE');
+    return;
+  }
 
-  // 9. Create tooltip (stretch goal)
-  const tooltip = createTooltip(camera, scene, particleSystems, catalogData);
-
-  // 10. Keyboard handler for Kessler toggle
   window.addEventListener('keydown', (e) => {
     if (e.key === 'k' || e.key === 'K') {
       kessler.toggle();
@@ -83,12 +88,7 @@ async function boot() {
     }
   });
 
-  // 11. Hook up time scale changes from UI
-  // The UI modifies state.timeScale directly via the slider
-
   updateProgress(1.0, 'CATALOG ACQUIRED');
-
-  // 12. Hide loader after a brief moment
   setTimeout(() => hideLoader(), 400);
 
   // ─── ANIMATION LOOP ────────────────────────────────────────────────────
