@@ -13,7 +13,7 @@ import { createUI } from './ui.js';
 import { createKesslerOverlay } from './kessler.js';
 import { updateProgress, hideLoader } from './loader.js';
 import { createTooltip } from './tooltip.js';
-import { initOrbits } from './orbits.js';
+import { initOrbits, updateOrbitsFrame } from './orbits.js';
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
 
@@ -188,6 +188,9 @@ async function boot() {
 
     // Update selected object's live info
     tooltip.updateSelected(propagator);
+
+    // Update orbit line GMST rotation
+    updateOrbitsFrame(state.simTime);
 
     // Update film grain time
     filmGrainPass.uniforms.uTime.value = performance.now() * 0.001;

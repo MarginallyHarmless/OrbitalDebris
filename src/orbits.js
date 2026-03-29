@@ -38,7 +38,9 @@ function sampleOrbitPoints(satData, refTimeMs) {
 
   const points = [];
   const step = periodMs / SAMPLE_POINTS;
-
+  // Compute orbit points with gmst=0 (pure ECI→scene mapping).
+  // The selectedGroup is rotated each frame by current GMST to stay aligned
+  // with particle positions (which use current GMST).
   for (let i = 0; i < SAMPLE_POINTS; i++) {
     const t = refTimeMs + i * step;
     let eciPos = null;
@@ -57,8 +59,7 @@ function sampleOrbitPoints(satData, refTimeMs) {
 
     if (!eciPos || isNaN(eciPos.x)) return null;
 
-    const gmst = satellite.gstime(new Date(t));
-    points.push(eciToScene(eciPos, gmst));
+    points.push(eciToScene(eciPos, 0));
   }
 
   return points;
@@ -115,6 +116,13 @@ export function setSelectedOrbit(satData, category, refTimeMs) {
 
   selectedLine = new Line2(geometry, material);
   selectedGroup.add(selectedLine);
+}
+
+export function updateOrbitsFrame(simTime) {
+  if (!selectedGroup) return;
+  // Rotate orbit group by current GMST to match particle positions
+  const gmst = satellite.gstime(simTime);
+  selectedGroup.rotation.y = gmst;
 }
 
 export function clearSelectedOrbit() {
