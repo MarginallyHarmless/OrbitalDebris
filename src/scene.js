@@ -69,7 +69,7 @@ export function createScene() {
     starPositions[i * 3 + 1] = starRadius * Math.sin(phi) * Math.sin(theta);
     starPositions[i * 3 + 2] = starRadius * Math.cos(phi);
 
-    const brightness = Math.pow(Math.random(), 2) * 0.6 + 0.15;
+    const brightness = Math.pow(Math.random(), 2) * 0.35 + 0.08;
     const tint = Math.random();
     starColors[i * 3]     = brightness * (0.8 + tint * 0.2);
     starColors[i * 3 + 1] = brightness * (0.85 + tint * 0.15);

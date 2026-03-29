@@ -158,8 +158,8 @@ function createPointMaterial(color, size, opacity, texture) {
       void main() {
         vec4 texColor = texture2D(uMap, gl_PointCoord);
 
-        // Sun-facing brightness: sun side bright, shadow side dims to 15%
-        float brightness = smoothstep(-0.3, 0.5, vSunFactor) * 0.85 + 0.15;
+        // Sun-facing brightness: sun side bright, shadow side dims to 35%
+        float brightness = smoothstep(-0.3, 0.5, vSunFactor) * 0.65 + 0.35;
 
         // Color temperature shift: warm on sun side, cool on shadow
         vec3 warmShift = vec3(1.1, 1.0, 0.9);
