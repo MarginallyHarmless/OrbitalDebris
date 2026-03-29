@@ -95,26 +95,65 @@ export function createUI(state, particleSystems, controls, propagator) {
   hud.style.pointerEvents = 'auto';
   hud.style.userSelect = 'none';
 
-  // ── Title ──────────────────────────────────────────────────────────────────
+  // ── Title row with collapse toggle ──────────────────────────────────────────
+  const titleRow = document.createElement('div');
+  titleRow.style.display = 'flex';
+  titleRow.style.alignItems = 'center';
+  titleRow.style.justifyContent = 'space-between';
+  titleRow.style.cursor = 'pointer';
+
   const title = document.createElement('div');
   title.textContent = 'Orbital Debris Field';
   baseStyle(title);
   title.style.fontSize = '15px';
   title.style.fontWeight = '700';
   title.style.color = VISUAL_CONFIG.ui.colorBright;
-  title.style.marginBottom = '2px';
-  hud.appendChild(title);
 
-  // ── Date readout ───────────────────────────────────────────────────────────
+  const collapseBtn = document.createElement('span');
+  baseStyle(collapseBtn);
+  collapseBtn.style.fontSize = '14px';
+  collapseBtn.style.color = VISUAL_CONFIG.ui.colorDim;
+  collapseBtn.style.transition = 'transform 0.2s';
+  collapseBtn.textContent = '▾';
+  collapseBtn.style.marginLeft = '12px';
+
+  titleRow.appendChild(title);
+  titleRow.appendChild(collapseBtn);
+  hud.appendChild(titleRow);
+
+  // ── Date readout (always visible) ─────────────────────────────────────────
   const dateReadout = document.createElement('div');
   dateReadout.id = 'sim-date';
   baseStyle(dateReadout);
   dateReadout.style.fontSize = '11px';
   dateReadout.style.color = VISUAL_CONFIG.ui.colorDim;
+  dateReadout.style.marginTop = '2px';
   dateReadout.textContent = formatSimDate(state.simTime);
   hud.appendChild(dateReadout);
 
-  hud.appendChild(createDivider());
+  // ── Collapsible content container ─────────────────────────────────────────
+  const content = document.createElement('div');
+  content.style.overflow = 'hidden';
+  content.style.transition = 'max-height 0.3s ease, opacity 0.2s ease';
+  content.style.maxHeight = '1000px';
+  content.style.opacity = '1';
+  hud.appendChild(content);
+
+  let collapsed = false;
+  titleRow.addEventListener('click', () => {
+    collapsed = !collapsed;
+    if (collapsed) {
+      content.style.maxHeight = '0';
+      content.style.opacity = '0';
+      collapseBtn.style.transform = 'rotate(-90deg)';
+    } else {
+      content.style.maxHeight = '1000px';
+      content.style.opacity = '1';
+      collapseBtn.style.transform = 'rotate(0deg)';
+    }
+  });
+
+  content.appendChild(createDivider());
 
   // ── Play / Pause toggle ────────────────────────────────────────────────────
   const playBtn = document.createElement('div');
@@ -142,15 +181,15 @@ export function createUI(state, particleSystems, controls, propagator) {
     updatePlayBtn();
   });
 
-  hud.appendChild(playBtn);
+  content.appendChild(playBtn);
 
-  hud.appendChild(createDivider());
+  content.appendChild(createDivider());
 
   // ── Year slider ──────────────────────────────────────────────────────────
   const MIN_YEAR = 1957;
   const MAX_YEAR = new Date().getFullYear();
 
-  hud.appendChild(sectionLabel('Time Period'));
+  content.appendChild(sectionLabel('Time Period'));
 
   const yearRow = document.createElement('div');
   yearRow.style.display = 'flex';
@@ -262,12 +301,12 @@ export function createUI(state, particleSystems, controls, propagator) {
   yearRow.appendChild(yearSlider);
   yearRow.appendChild(yearReadout);
   yearRow.appendChild(yearResetBtn);
-  hud.appendChild(yearRow);
+  content.appendChild(yearRow);
 
-  hud.appendChild(createDivider());
+  content.appendChild(createDivider());
 
   // ── Category toggles ──────────────────────────────────────────────────────
-  hud.appendChild(sectionLabel('Categories'));
+  content.appendChild(sectionLabel('Categories'));
 
   const countSpans = {};
 
@@ -308,7 +347,7 @@ export function createUI(state, particleSystems, controls, propagator) {
     row.appendChild(icon);
     row.appendChild(label);
     row.appendChild(count);
-    hud.appendChild(row);
+    content.appendChild(row);
 
     let visible = true;
     row.addEventListener('click', () => {
@@ -320,7 +359,7 @@ export function createUI(state, particleSystems, controls, propagator) {
     });
   }
 
-  hud.appendChild(createDivider());
+  content.appendChild(createDivider());
 
   // ── Country filter ────────────────────────────────────────────────────────
   const COUNTRY_OPTIONS = [
@@ -342,7 +381,7 @@ export function createUI(state, particleSystems, controls, propagator) {
     }
   }
 
-  hud.appendChild(sectionLabel('Country'));
+  content.appendChild(sectionLabel('Country'));
 
   const countryActiveSet = new Set(); // which country groups are toggled ON
   function applyCountryFilter() {
@@ -385,7 +424,7 @@ export function createUI(state, particleSystems, controls, propagator) {
 
     row.appendChild(check);
     row.appendChild(lbl);
-    hud.appendChild(row);
+    content.appendChild(row);
     countryRows.push({ row, check, code: opt.code });
 
     let on = false;
@@ -406,14 +445,14 @@ export function createUI(state, particleSystems, controls, propagator) {
     });
   }
 
-  hud.appendChild(createDivider());
+  content.appendChild(createDivider());
 
   // ── Total count ────────────────────────────────────────────────────────────
   const totalDiv = document.createElement('div');
   baseStyle(totalDiv);
   totalDiv.style.fontWeight = '500';
   totalDiv.textContent = formatCount(state.counts.total || 0) + ' tracked';
-  hud.appendChild(totalDiv);
+  content.appendChild(totalDiv);
 
   // ── Data source ───────────────────────────────────────────────────────────
   const SOURCE_LINKS = {
@@ -461,7 +500,7 @@ export function createUI(state, particleSystems, controls, propagator) {
     }
   }
 
-  hud.appendChild(sourceDiv);
+  content.appendChild(sourceDiv);
 
   // ── Kessler toggle hint ────────────────────────────────────────────────────
   const kesslerHint = document.createElement('div');
@@ -472,7 +511,7 @@ export function createUI(state, particleSystems, controls, propagator) {
   kesslerHint.style.opacity = state.kesslerVisible ? '0.8' : '0.5';
   kesslerHint.style.transition = 'opacity 0.15s';
   kesslerHint.innerHTML = '<span style="color:#00e5ff">K</span> Kessler Overlay';
-  hud.appendChild(kesslerHint);
+  content.appendChild(kesslerHint);
 
   // ── Shared count updater ───────────────────────────────────────────────────
 
