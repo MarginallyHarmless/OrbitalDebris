@@ -33,16 +33,17 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     position: 'fixed',
     pointerEvents: 'none',
     zIndex: '1000',
-    background: 'rgba(0,0,0,0.85)',
-    border: '1px solid rgba(0,229,255,0.3)',
+    background: 'rgba(10, 12, 20, 0.75)',
+    backdropFilter: 'blur(12px)',
+    webkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.1)',
     padding: '8px 12px',
-    fontFamily: "'Space Mono', monospace",
-    fontSize: '10px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    color: 'rgba(0,229,255,0.8)',
+    fontFamily: "'Satoshi', sans-serif",
+    fontSize: '11px',
+    letterSpacing: '0.02em',
+    color: 'rgba(255,255,255,0.8)',
     display: 'none',
-    borderRadius: '0',
+    borderRadius: '8px',
   });
   document.body.appendChild(tooltip);
 
@@ -54,17 +55,18 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     right: '16px',
     pointerEvents: 'auto',
     zIndex: '1000',
-    background: 'rgba(0,0,0,0.9)',
-    border: '1px solid rgba(0,229,255,0.4)',
-    padding: '12px 16px',
-    fontFamily: "'Space Mono', monospace",
-    fontSize: '10px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    color: 'rgba(0,229,255,0.8)',
+    background: 'rgba(10, 12, 20, 0.7)',
+    backdropFilter: 'blur(16px)',
+    webkitBackdropFilter: 'blur(16px)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    padding: '14px 18px',
+    fontFamily: "'Satoshi', sans-serif",
+    fontSize: '11px',
+    letterSpacing: '0.02em',
+    color: 'rgba(255,255,255,0.7)',
     display: 'none',
-    borderRadius: '0',
-    minWidth: '180px',
+    borderRadius: '10px',
+    minWidth: '200px',
   });
   document.body.appendChild(panel);
 
@@ -116,29 +118,30 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
 
     let nameHtml;
     if (detailed && noradId !== '-----') {
-      // Clickable name linking to N2YO satellite info page
       const n2yoUrl = `https://www.n2yo.com/satellite/?s=${noradId}`;
-      nameHtml = `<a href="${n2yoUrl}" target="_blank" rel="noopener" style="color:${color};text-decoration:none;border-bottom:1px solid ${color}40;cursor:pointer;pointer-events:auto">${name}</a>`;
+      nameHtml = `<a href="${n2yoUrl}" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.95);text-decoration:none;cursor:pointer;pointer-events:auto;transition:opacity 0.15s" onmouseenter="this.style.opacity='0.7'" onmouseleave="this.style.opacity='1'">${name} ↗</a>`;
     } else {
-      nameHtml = name;
+      nameHtml = `<span style="color:rgba(255,255,255,0.95)">${name}</span>`;
     }
 
-    let html =
-      `<div style="color:${color};margin-bottom:4px;font-size:11px">${nameHtml}</div>` +
-      `<div>NORAD ${noradId}</div>` +
-      `<div data-alt>ALT: ${Math.round(Math.max(0, altitudeKm))} KM</div>` +
-      `<div>TYPE: ${catLabel}</div>`;
+    const dimStyle = 'color:rgba(255,255,255,0.45);font-size:10px';
+    const dotHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${color};margin-right:6px;box-shadow:0 0 4px ${color}60"></span>`;
 
-    // Extra fields for the selection panel
+    let html =
+      `<div style="font-size:13px;font-weight:500;margin-bottom:6px">${nameHtml}</div>` +
+      `<div style="${dimStyle}">${dotHtml}${catLabel}</div>` +
+      `<div style="${dimStyle}">NORAD ${noradId}</div>` +
+      `<div style="${dimStyle}" data-alt>ALT ${Math.round(Math.max(0, altitudeKm))} km</div>`;
+
     if (detailed) {
       if (satData.country) {
-        html += `<div style="margin-top:4px">ORIGIN: ${satData.country}</div>`;
+        html += `<div style="${dimStyle};margin-top:6px">Origin: ${satData.country}</div>`;
       }
       if (satData.launchDate) {
-        html += `<div>LAUNCHED: ${satData.launchDate}</div>`;
+        html += `<div style="${dimStyle}">Launched: ${satData.launchDate}</div>`;
       }
       if (satData.launchMass) {
-        html += `<div>MASS: ${satData.launchMass} KG</div>`;
+        html += `<div style="${dimStyle}">Mass: ${satData.launchMass} kg</div>`;
       }
     }
 
@@ -294,7 +297,8 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     display: 'none',
     opacity: '0',
     transition: 'opacity 0.3s ease',
-    border: '1px solid rgba(0,229,255,0.15)',
+    borderRadius: '6px',
+    border: '1px solid rgba(255,255,255,0.08)',
   });
   panelImage.addEventListener('load', () => {
     panelImage.style.display = 'block';
@@ -391,7 +395,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     // Text info
     const textDiv = document.createElement('div');
     textDiv.innerHTML =
-      `<div style="color:rgba(0,229,255,0.4);margin-bottom:6px;font-size:9px">SELECTED OBJECT</div>` +
+      `<div style="color:rgba(255,255,255,0.3);margin-bottom:8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Selected Object</div>` +
       formatInfo(satData, category, alt, true);
     panel.appendChild(textDiv);
 

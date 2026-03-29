@@ -1,14 +1,14 @@
 import { VISUAL_CONFIG, PALETTE } from './config.js';
 
 // ─── DOM HUD OVERLAY ────────────────────────────────────────────────────────
-// Builds all control UI inside #hud. Pure DOM, no canvas.
+// Glassmorphism UI panels over the 3D scene.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { key: 'active',     label: 'ACTIVE SATELLITES' },
-  { key: 'debris',     label: 'DEBRIS' },
-  { key: 'rocketBody', label: 'ROCKET BODIES' },
-  { key: 'station',    label: 'STATIONS' },
+  { key: 'active',     label: 'Active Satellites' },
+  { key: 'debris',     label: 'Debris' },
+  { key: 'rocketBody', label: 'Rocket Bodies' },
+  { key: 'station',    label: 'Stations' },
 ];
 
 function formatCount(n) {
@@ -21,39 +21,63 @@ function injectStyles() {
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 120px;
-  height: 1px;
-  background: rgba(0, 229, 255, 0.2);
+  width: 130px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
   outline: none;
   margin: 6px 0;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   background: #00e5ff;
+  border-radius: 50%;
   cursor: pointer;
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
 }
 `;
   document.head.appendChild(style);
+}
+
+const G = VISUAL_CONFIG.ui.glass;
+
+function applyGlass(el) {
+  el.style.background = G.background;
+  el.style.backdropFilter = `blur(${G.blur})`;
+  el.style.webkitBackdropFilter = `blur(${G.blur})`;
+  el.style.border = G.border;
+  el.style.borderRadius = G.borderRadius;
 }
 
 function baseStyle(el) {
   el.style.fontFamily = VISUAL_CONFIG.ui.font;
   el.style.fontSize = VISUAL_CONFIG.ui.fontSize;
   el.style.color = VISUAL_CONFIG.ui.color;
-  el.style.textTransform = 'uppercase';
   el.style.letterSpacing = VISUAL_CONFIG.ui.letterSpacing;
 }
 
-function createSeparator() {
-  const sep = document.createElement('div');
-  sep.style.width = '150px';
-  sep.style.height = '1px';
-  sep.style.background = 'rgba(0, 229, 255, 0.15)';
-  sep.style.margin = '8px 0';
-  return sep;
+function sectionLabel(text) {
+  const el = document.createElement('div');
+  baseStyle(el);
+  el.style.fontSize = '10px';
+  el.style.fontWeight = '500';
+  el.style.textTransform = 'uppercase';
+  el.style.letterSpacing = '0.1em';
+  el.style.color = VISUAL_CONFIG.ui.colorDim;
+  el.style.marginBottom = '6px';
+  el.textContent = text;
+  return el;
+}
+
+function createDivider() {
+  const div = document.createElement('div');
+  div.style.height = '1px';
+  div.style.background = 'rgba(255, 255, 255, 0.06)';
+  div.style.margin = '10px 0';
+  return div;
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────
@@ -63,44 +87,52 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   const hud = document.getElementById('hud');
 
-  // Apply base styles to HUD container
+  // Glass card container
+  applyGlass(hud);
   baseStyle(hud);
-  hud.style.position = 'absolute';
-  hud.style.top = '16px';
-  hud.style.left = '16px';
+  hud.style.padding = '16px 20px';
+  hud.style.minWidth = '200px';
   hud.style.pointerEvents = 'auto';
   hud.style.userSelect = 'none';
 
   // ── Title ──────────────────────────────────────────────────────────────────
   const title = document.createElement('div');
-  title.textContent = 'ORBITAL DEBRIS FIELD';
+  title.textContent = 'Orbital Debris Field';
   baseStyle(title);
-  title.style.fontSize = '13px';
-  title.style.color = 'rgba(0, 229, 255, 0.8)';
+  title.style.fontSize = '15px';
+  title.style.fontWeight = '700';
+  title.style.color = VISUAL_CONFIG.ui.colorBright;
+  title.style.marginBottom = '2px';
   hud.appendChild(title);
 
   // ── Date readout ───────────────────────────────────────────────────────────
   const dateReadout = document.createElement('div');
   dateReadout.id = 'sim-date';
   baseStyle(dateReadout);
-  dateReadout.style.marginTop = '4px';
+  dateReadout.style.fontSize = '11px';
+  dateReadout.style.color = VISUAL_CONFIG.ui.colorDim;
   dateReadout.textContent = formatSimDate(state.simTime);
   hud.appendChild(dateReadout);
 
-  // ── Separator ──────────────────────────────────────────────────────────────
-  hud.appendChild(createSeparator());
+  hud.appendChild(createDivider());
 
   // ── Play / Pause toggle ────────────────────────────────────────────────────
   const playBtn = document.createElement('div');
   baseStyle(playBtn);
   playBtn.style.cursor = 'pointer';
-  playBtn.style.padding = '2px 0';
+  playBtn.style.padding = '4px 0';
+  playBtn.style.transition = 'color 0.15s';
   let playing = state.timeScale > 0;
   const savedScale = state.timeScale || VISUAL_CONFIG.time.defaultScale;
 
   function updatePlayBtn() {
-    playBtn.textContent = playing ? '▮▮ PAUSE' : '▶ PLAY';
-    playBtn.style.color = playing ? VISUAL_CONFIG.ui.color : 'rgba(0, 229, 255, 0.3)';
+    if (playing) {
+      playBtn.textContent = '⏸  Pause';
+      playBtn.style.color = VISUAL_CONFIG.ui.color;
+    } else {
+      playBtn.textContent = '▶  Play';
+      playBtn.style.color = VISUAL_CONFIG.ui.colorDim;
+    }
   }
   updatePlayBtn();
 
@@ -113,56 +145,49 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   hud.appendChild(playBtn);
 
-  // ── Separator ──────────────────────────────────────────────────────────────
-  hud.appendChild(createSeparator());
+  hud.appendChild(createDivider());
 
   // ── Year slider ──────────────────────────────────────────────────────────
   const MIN_YEAR = 1957;
   const MAX_YEAR = new Date().getFullYear();
 
-  const yearLabel = document.createElement('div');
-  baseStyle(yearLabel);
-  yearLabel.textContent = 'TIME PERIOD';
-  hud.appendChild(yearLabel);
+  hud.appendChild(sectionLabel('Time Period'));
 
   const yearRow = document.createElement('div');
   yearRow.style.display = 'flex';
   yearRow.style.alignItems = 'center';
-  yearRow.style.gap = '8px';
+  yearRow.style.gap = '10px';
 
   const yearSlider = document.createElement('input');
   yearSlider.type = 'range';
   yearSlider.min = String(MIN_YEAR);
   yearSlider.max = String(MAX_YEAR);
   yearSlider.value = String(MAX_YEAR);
-  yearSlider.style.width = '120px';
 
   const yearReadout = document.createElement('span');
   baseStyle(yearReadout);
-  yearReadout.textContent = 'ALL';
+  yearReadout.style.fontWeight = '500';
+  yearReadout.style.minWidth = '32px';
+  yearReadout.textContent = 'All';
 
   const yearResetBtn = document.createElement('span');
   baseStyle(yearResetBtn);
   yearResetBtn.textContent = '✕';
   yearResetBtn.style.cursor = 'pointer';
-  yearResetBtn.style.opacity = '0.3';
+  yearResetBtn.style.opacity = '0.25';
   yearResetBtn.style.pointerEvents = 'auto';
-  yearResetBtn.style.fontSize = '9px';
+  yearResetBtn.style.fontSize = '10px';
+  yearResetBtn.style.transition = 'opacity 0.15s';
 
   let yearActive = false;
-  let savedSimTime = null; // real time before year slider was engaged
+  let savedSimTime = null;
   let wasPlaying = false;
 
   function applyYear(year) {
     if (propagator) {
       propagator.setYearFilter(year);
-
-      // Set simulation time to July 1st of the selected year
       state.simTime = new Date(year, 6, 1);
-
-      // Force a full re-propagation at the new time
       propagator.propagateAll(state.simTime);
-
       const fc = propagator.getCounts();
       updateCountsInternal(fc);
     }
@@ -171,10 +196,9 @@ export function createUI(state, particleSystems, controls, propagator) {
   yearSlider.addEventListener('input', () => {
     const year = parseInt(yearSlider.value, 10);
     yearReadout.textContent = String(year);
-    yearResetBtn.style.opacity = '0.8';
+    yearResetBtn.style.opacity = '0.7';
 
     if (!yearActive) {
-      // First activation — save current state and pause
       yearActive = true;
       savedSimTime = new Date(state.simTime.getTime());
       wasPlaying = playing;
@@ -190,22 +214,18 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   yearResetBtn.addEventListener('click', () => {
     yearSlider.value = String(MAX_YEAR);
-    yearReadout.textContent = 'ALL';
-    yearResetBtn.style.opacity = '0.3';
+    yearReadout.textContent = 'All';
+    yearResetBtn.style.opacity = '0.25';
     yearActive = false;
 
     if (propagator) {
       propagator.setYearFilter(null);
-
-      // Restore real time
       state.simTime = savedSimTime || new Date();
       propagator.propagateAll(state.simTime);
-
       const fc = propagator.getCounts();
       updateCountsInternal(fc);
     }
 
-    // Restore play state
     if (wasPlaying) {
       playing = true;
       state.timeScale = savedScale;
@@ -219,11 +239,11 @@ export function createUI(state, particleSystems, controls, propagator) {
   yearRow.appendChild(yearResetBtn);
   hud.appendChild(yearRow);
 
-  // ── Separator ──────────────────────────────────────────────────────────────
-  hud.appendChild(createSeparator());
+  hud.appendChild(createDivider());
 
   // ── Category toggles ──────────────────────────────────────────────────────
-  const categoryRows = {};
+  hud.appendChild(sectionLabel('Categories'));
+
   const countSpans = {};
 
   for (const cat of CATEGORIES) {
@@ -231,25 +251,27 @@ export function createUI(state, particleSystems, controls, propagator) {
     baseStyle(row);
     row.style.display = 'flex';
     row.style.alignItems = 'center';
-    row.style.gap = '6px';
+    row.style.gap = '8px';
     row.style.cursor = 'pointer';
-    row.style.padding = '2px 0';
+    row.style.padding = '3px 0';
+    row.style.transition = 'opacity 0.15s';
 
-    // Colored dot
     const dot = document.createElement('span');
     dot.style.display = 'inline-block';
     dot.style.width = '8px';
     dot.style.height = '8px';
+    dot.style.borderRadius = '50%';
     dot.style.background = PALETTE[cat.key];
     dot.style.flexShrink = '0';
+    dot.style.boxShadow = `0 0 4px ${PALETTE[cat.key]}60`;
 
-    // Label
     const label = document.createElement('span');
     label.textContent = cat.label;
 
-    // Count
     const count = document.createElement('span');
     count.style.marginLeft = 'auto';
+    count.style.color = VISUAL_CONFIG.ui.colorDim;
+    count.style.fontSize = '11px';
     count.textContent = formatCount(state.counts[cat.key] || 0);
     countSpans[cat.key] = count;
 
@@ -257,43 +279,41 @@ export function createUI(state, particleSystems, controls, propagator) {
     row.appendChild(label);
     row.appendChild(count);
     hud.appendChild(row);
-    categoryRows[cat.key] = row;
 
-    // Toggle visibility on click
     let visible = true;
     row.addEventListener('click', () => {
       visible = !visible;
       if (particleSystems[cat.key] && particleSystems[cat.key].points) {
         particleSystems[cat.key].points.visible = visible;
       }
-      row.style.opacity = visible ? '1' : '0.3';
+      row.style.opacity = visible ? '1' : '0.35';
     });
   }
 
-  // ── Separator ──────────────────────────────────────────────────────────────
-  hud.appendChild(createSeparator());
+  hud.appendChild(createDivider());
 
   // ── Total count ────────────────────────────────────────────────────────────
   const totalDiv = document.createElement('div');
   baseStyle(totalDiv);
-  totalDiv.textContent = 'TOTAL TRACKED: ' + formatCount(state.counts.total || 0);
+  totalDiv.style.fontWeight = '500';
+  totalDiv.textContent = formatCount(state.counts.total || 0) + ' tracked';
   hud.appendChild(totalDiv);
 
   // ── Data source ───────────────────────────────────────────────────────────
   const SOURCE_LINKS = {
     'CELESTRAK': 'https://celestrak.org',
     'ASTRIAGRAPH / UT AUSTIN': 'http://astria.tacc.utexas.edu/AstriaGraph/',
-    'ASTRIAGRAPH + CELESTRAK': null, // multiple links below
+    'ASTRIAGRAPH + CELESTRAK': null,
     'SPACE-TRACK.ORG': 'https://www.space-track.org',
   };
 
   const sourceDiv = document.createElement('div');
   baseStyle(sourceDiv);
-  sourceDiv.style.marginTop = '6px';
+  sourceDiv.style.marginTop = '4px';
   sourceDiv.style.fontSize = '10px';
-  sourceDiv.style.opacity = '0.6';
+  sourceDiv.style.color = VISUAL_CONFIG.ui.colorDim;
 
-  sourceDiv.appendChild(document.createTextNode('SOURCE: '));
+  sourceDiv.appendChild(document.createTextNode('Source: '));
 
   const sourceName = state.dataSource || '---';
 
@@ -303,17 +323,19 @@ export function createUI(state, particleSystems, controls, propagator) {
     a.href = url;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.style.color = VISUAL_CONFIG.ui.color;
+    a.style.color = VISUAL_CONFIG.ui.accent;
     a.style.textDecoration = 'none';
-    a.style.borderBottom = '1px solid rgba(0, 229, 255, 0.3)';
+    a.style.transition = 'opacity 0.15s';
     a.style.pointerEvents = 'auto';
+    a.addEventListener('mouseenter', () => a.style.opacity = '0.7');
+    a.addEventListener('mouseleave', () => a.style.opacity = '1');
     return a;
   }
 
   if (sourceName === 'ASTRIAGRAPH + CELESTRAK') {
-    sourceDiv.appendChild(makeLink('ASTRIAGRAPH', 'http://astria.tacc.utexas.edu/AstriaGraph/'));
+    sourceDiv.appendChild(makeLink('AstriaGraph', 'http://astria.tacc.utexas.edu/AstriaGraph/'));
     sourceDiv.appendChild(document.createTextNode(' + '));
-    sourceDiv.appendChild(makeLink('CELESTRAK', 'https://celestrak.org'));
+    sourceDiv.appendChild(makeLink('Celestrak', 'https://celestrak.org'));
   } else {
     const sourceUrl = SOURCE_LINKS[sourceName];
     if (sourceUrl) {
@@ -329,8 +351,11 @@ export function createUI(state, particleSystems, controls, propagator) {
   const kesslerHint = document.createElement('div');
   baseStyle(kesslerHint);
   kesslerHint.style.marginTop = '8px';
-  kesslerHint.style.opacity = state.kesslerVisible ? '0.8' : '0.3';
-  kesslerHint.textContent = '[K] KESSLER OVERLAY';
+  kesslerHint.style.fontSize = '10px';
+  kesslerHint.style.color = VISUAL_CONFIG.ui.colorDim;
+  kesslerHint.style.opacity = state.kesslerVisible ? '0.8' : '0.5';
+  kesslerHint.style.transition = 'opacity 0.15s';
+  kesslerHint.innerHTML = '<span style="color:#00e5ff">K</span> Kessler Overlay';
   hud.appendChild(kesslerHint);
 
   // ── Shared count updater ───────────────────────────────────────────────────
@@ -339,7 +364,7 @@ export function createUI(state, particleSystems, controls, propagator) {
     for (const cat of CATEGORIES) {
       countSpans[cat.key].textContent = formatCount(counts[cat.key] || 0);
     }
-    totalDiv.textContent = 'TOTAL TRACKED: ' + formatCount(counts.total || 0);
+    totalDiv.textContent = formatCount(counts.total || 0) + ' tracked';
   }
 
   // ── Return update API ─────────────────────────────────────────────────────
@@ -354,7 +379,7 @@ export function createUI(state, particleSystems, controls, propagator) {
     },
 
     setKesslerState(visible) {
-      kesslerHint.style.opacity = visible ? '0.8' : '0.3';
+      kesslerHint.style.opacity = visible ? '0.8' : '0.5';
     },
   };
 }

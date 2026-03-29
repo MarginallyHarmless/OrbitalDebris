@@ -46,32 +46,38 @@ export function createKesslerOverlay(scene) {
   // ── Legend DOM element ─────────────────────────────────────────────────────
 
   const legend = document.createElement('div');
-  legend.style.position = 'absolute';
-  legend.style.bottom = '16px';
-  legend.style.left = '16px';
-  legend.style.fontFamily = VISUAL_CONFIG.ui.font;
-  legend.style.fontSize = VISUAL_CONFIG.ui.fontSize;
-  legend.style.color = VISUAL_CONFIG.ui.color;
-  legend.style.textTransform = 'uppercase';
-  legend.style.letterSpacing = VISUAL_CONFIG.ui.letterSpacing;
-  legend.style.pointerEvents = 'none';
-  legend.style.display = 'none';
+  Object.assign(legend.style, {
+    position: 'absolute',
+    bottom: '16px',
+    left: '16px',
+    fontFamily: VISUAL_CONFIG.ui.font,
+    fontSize: '11px',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: '0.02em',
+    pointerEvents: 'none',
+    display: 'none',
+    background: 'rgba(10, 12, 20, 0.6)',
+    backdropFilter: 'blur(12px)',
+    webkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '8px',
+    padding: '10px 14px',
+  });
   document.body.appendChild(legend);
 
   function renderLegend(bandCounts) {
-    // Find top 3 bands by count
     const sorted = bandCounts
       .map((count, i) => ({ count, alt: bands[i].midAlt }))
       .filter((b) => b.count > 0)
       .sort((a, b) => b.count - a.count)
       .slice(0, 3);
 
-    let html = '<div style="margin-bottom:4px; color:rgba(0,229,255,0.8);">KESSLER DENSITY</div>';
+    let html = '<div style="margin-bottom:6px;color:rgba(255,255,255,0.4);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Kessler Density</div>';
     for (const entry of sorted) {
-      html += `<div>${Math.round(entry.alt)} KM &mdash; ${entry.count.toLocaleString('en-US')}</div>`;
+      html += `<div style="color:rgba(255,255,255,0.6)">${Math.round(entry.alt)} km — ${entry.count.toLocaleString('en-US')}</div>`;
     }
     if (sorted.length === 0) {
-      html += '<div>NO DATA</div>';
+      html += '<div>No data</div>';
     }
     legend.innerHTML = html;
   }

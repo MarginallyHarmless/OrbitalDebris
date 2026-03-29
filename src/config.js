@@ -1,6 +1,6 @@
 // ─── VISUAL_CONFIG ──────────────────────────────────────────────────────────
 // Single source of truth for all aesthetic parameters.
-// Change the entire look by editing only this object.
+// Aesthetic: glassmorphism — frosted glass panels over dark 3D scene
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const PALETTE = {
@@ -18,13 +18,11 @@ export const PALETTE = {
 export const VISUAL_CONFIG = {
   palette: { ...PALETTE },
 
-  // Point sizes in world units (sizeAttenuation: true)
-  // Scaled to reflect relative physical size of objects
   pointSizes: {
-    station:    0.04,    // ISS/CSS ~100m
-    rocketBody: 0.02,    // spent upper stages ~5-10m
-    active:     0.012,   // operational payloads ~1-5m
-    debris:     0.014,   // fragments ~0.1-1m
+    station:    0.04,
+    rocketBody: 0.02,
+    active:     0.012,
+    debris:     0.014,
   },
 
   earth: {
@@ -51,7 +49,7 @@ export const VISUAL_CONFIG = {
     near:       0.01,
     far:        200,
     distance:   3.5,
-    autoRotateSpeed: 0.3,   // OrbitControls multiplier (2.0 = 30s/rev)
+    autoRotateSpeed: 0.3,
     minDistance: 1.5,
     maxDistance: 20,
   },
@@ -62,8 +60,8 @@ export const VISUAL_CONFIG = {
   },
 
   propagation: {
-    interval:   120,      // frames between full propagation updates
-    batchSize:  5000,     // satellites propagated per frame in round-robin
+    interval:   120,
+    batchSize:  5000,
     earthRadiusKm: 6371,
   },
 
@@ -74,18 +72,27 @@ export const VISUAL_CONFIG = {
   },
 
   kessler: {
-    minAlt:     200,      // km
-    maxAlt:     2000,     // km
-    bandWidth:  50,       // km per band
+    minAlt:     200,
+    maxAlt:     2000,
+    bandWidth:  50,
     color:      PALETTE.densityRing,
     maxOpacity: 0.35,
   },
 
   ui: {
-    font:       "'Space Mono', monospace",
-    fontSize:   '11px',
-    color:      'rgba(0, 229, 255, 0.6)',
-    border:     '1px solid rgba(0, 229, 255, 0.2)',
-    letterSpacing: '0.15em',
+    font:          "'Satoshi', sans-serif",
+    fontSize:      '12px',
+    color:         'rgba(255, 255, 255, 0.7)',
+    colorDim:      'rgba(255, 255, 255, 0.4)',
+    colorBright:   'rgba(255, 255, 255, 0.9)',
+    accent:        '#00e5ff',
+    border:        '1px solid rgba(255, 255, 255, 0.08)',
+    letterSpacing: '0.02em',
+    glass: {
+      background:  'rgba(10, 12, 20, 0.6)',
+      blur:        '12px',
+      border:      '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '10px',
+    },
   },
 };

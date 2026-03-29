@@ -135,11 +135,8 @@ async function boot() {
       ui.updateCounts(propagator.getCounts());
     }
 
-    // Rotate Earth realistically (sidereal day = 86164.1s)
-    const SIDEREAL_DAY = 86164.1;
-    const earthRotation = dt * state.timeScale * (2 * Math.PI / SIDEREAL_DAY);
-    earthMesh.rotation.y += earthRotation;
-    if (gridMesh) gridMesh.rotation.y = earthMesh.rotation.y;
+    // Earth rotation disabled — at 1x speed it's imperceptible and
+    // any visible spin would be out of sync with orbital object movement
 
     // Interpolate positions every frame for smooth motion
     propagator.interpolate(state.simTime.getTime());
