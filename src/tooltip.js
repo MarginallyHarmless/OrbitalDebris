@@ -437,7 +437,9 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
       showPanel(result.satData, result.category, alt);
 
       updateRing(result.hit.point);
-    } else {
+    } else if (!isMobile) {
+      // Desktop: click empty space to deselect
+      // Mobile: only deselect via the close button (taps are too imprecise)
       closePanel();
     }
   }
