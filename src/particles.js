@@ -110,7 +110,7 @@ const OPACITY = {
   station:    1.0,
 };
 
-const MIN_PIXEL_SIZE = 1.5;
+const MIN_PIXEL_SIZE = 2.0;
 
 const CATEGORIES = ['active', 'debris', 'rocketBody', 'station'];
 
@@ -132,7 +132,8 @@ function createPointMaterial(color, size, opacity, texture) {
       uniform float uPixelRatio;
       void main() {
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        float attenSize = uSize * uPixelRatio * (300.0 / -mvPosition.z);
+        float dist = -mvPosition.z;
+        float attenSize = uSize * uPixelRatio * (500.0 / sqrt(dist));
         gl_PointSize = max(attenSize, uMinSize * uPixelRatio);
         gl_Position = projectionMatrix * mvPosition;
       }
