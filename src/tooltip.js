@@ -47,13 +47,11 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   });
   document.body.appendChild(tooltip);
 
-  // ── Selection panel (absolute, top-right, mirrors the HUD positioning) ──
+  // ── Selection panel ────────────────────────────────────────────────────
   const isMobile = window.innerWidth < 768;
   const panel = document.createElement('div');
   Object.assign(panel.style, {
     position: 'absolute',
-    top: '16px',
-    right: '16px',
     pointerEvents: 'auto',
     zIndex: '10',
     background: 'rgba(10, 12, 20, 0.85)',
@@ -67,11 +65,26 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     color: 'rgba(255,255,255,0.7)',
     display: 'none',
     borderRadius: '10px',
-    maxWidth: isMobile ? '55vw' : '280px',
-    minWidth: isMobile ? '0' : '200px',
-    maxHeight: '80vh',
     overflowY: 'auto',
   });
+
+  if (isMobile) {
+    // Mobile: bottom of screen, full width with margin
+    panel.style.position = 'fixed';
+    panel.style.bottom = '0';
+    panel.style.left = '0';
+    panel.style.right = '0';
+    panel.style.maxHeight = '40vh';
+    panel.style.borderRadius = '12px 12px 0 0';
+  } else {
+    // Desktop: bottom-right corner
+    panel.style.bottom = '16px';
+    panel.style.right = '16px';
+    panel.style.minWidth = '200px';
+    panel.style.maxWidth = '280px';
+    panel.style.maxHeight = '80vh';
+  }
+
   document.body.appendChild(panel);
 
   // Clicks/taps on panel should not deselect
