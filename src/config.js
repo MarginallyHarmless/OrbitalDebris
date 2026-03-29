@@ -29,7 +29,7 @@ export const VISUAL_CONFIG = {
     radius:     1.0,
     segments:   64,
     color:      PALETTE.earth,
-    normalMapStrength: 1.5,
+    normalMapStrength: 0.6,
   },
 
   atmosphere: {
