@@ -140,6 +140,11 @@ async function boot() {
     earthUniforms.uSunDirection.value.copy(sunDir);
     atmosphereMaterial.uniforms.uSunDirection.value.copy(sunDir);
 
+    // Update particle sun direction
+    for (const key of ['active', 'debris', 'rocketBody', 'station']) {
+      particleSystems[key].material.uniforms.uSunDirection.value.copy(sunDir);
+    }
+
     // Rotate clouds independently
     cloudMesh.rotation.y += dt * VISUAL_CONFIG.clouds.rotationSpeed;
 
