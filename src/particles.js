@@ -108,8 +108,9 @@ const OPACITY = {
 };
 
 const IS_MOBILE = Math.min(window.innerWidth, window.innerHeight) < 768;
-const MIN_PIXEL_SIZE = IS_MOBILE ? 1.5 : 3.0;
-const SCREEN_SCALE = IS_MOBILE ? 0.5 : 1.0;
+const MIN_PIXEL_SIZE = IS_MOBILE ? 1.0 : 3.0;
+const SCREEN_SCALE = IS_MOBILE ? 0.35 : 1.0;
+const PIXEL_RATIO = IS_MOBILE ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2);
 
 const CATEGORIES = ['active', 'debris', 'rocketBody', 'station'];
 
@@ -123,7 +124,7 @@ function createPointMaterial(color, size, opacity, texture) {
       uMinSize:      { value: MIN_PIXEL_SIZE },
       uOpacity:      { value: opacity },
       uMap:          { value: texture },
-      uPixelRatio:   { value: Math.min(window.devicePixelRatio, 2) },
+      uPixelRatio:   { value: PIXEL_RATIO },
       uScreenScale:  { value: SCREEN_SCALE },
       uSunDirection: { value: new THREE.Vector3(5, 3, 5).normalize() },
     },
