@@ -72,8 +72,10 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   });
   document.body.appendChild(panel);
 
-  // Clicks on panel should not deselect
+  // Clicks/taps on panel should not deselect
   panel.addEventListener('click', (e) => e.stopPropagation());
+  panel.addEventListener('touchstart', (e) => e.stopPropagation());
+  panel.addEventListener('touchend', (e) => e.stopPropagation());
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -439,15 +441,10 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     }
   }
 
-  // Desktop: hover + click
-  if (!isMobile) {
-    window.addEventListener('mousemove', onMouseMove);
-  }
-  window.addEventListener('click', onClick);
-
-  // Mobile: also handle touch-tap (touchend after short touch = tap)
   if (isMobile) {
+    // Mobile: touch-based tap detection only (no hover, no click)
     let touchStart = null;
+
     window.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
@@ -459,15 +456,18 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     window.addEventListener('touchend', (e) => {
       if (!touchStart) return;
       const dt = Date.now() - touchStart.time;
-      if (dt > 300) { touchStart = null; return; } // too long = not a tap
+      if (dt > 300) { touchStart = null; return; }
       const touch = e.changedTouches[0];
       const dx = touch.clientX - touchStart.x;
       const dy = touch.clientY - touchStart.y;
-      if (Math.sqrt(dx * dx + dy * dy) > 15) { touchStart = null; return; } // dragged
-      // Simulate click for raycast
+      if (Math.sqrt(dx * dx + dy * dy) > 15) { touchStart = null; return; }
       onClick({ clientX: touch.clientX, clientY: touch.clientY });
       touchStart = null;
     });
+  } else {
+    // Desktop: hover + click
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('click', onClick);
   }
 
   return {
