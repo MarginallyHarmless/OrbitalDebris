@@ -6,9 +6,7 @@ const BASE = import.meta.env.BASE_URL || '/';
 // Known space stations — always categorized as 'station' regardless of source
 const STATION_IDS = new Set([
   25544,  // ISS
-  48274,  // CSS (Tianhe)
-  53239,  // CSS (Wentian)
-  54216,  // CSS (Mengtian)
+  48274,  // CSS (Tianhe core module — Wentian & Mengtian are docked to it)
 ]);
 
 // ─── Categorize by TLE object name ──────────────────────────────────────────
