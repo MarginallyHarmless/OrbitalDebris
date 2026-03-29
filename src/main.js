@@ -13,6 +13,7 @@ import { createUI } from './ui.js';
 import { createKesslerOverlay } from './kessler.js';
 import { updateProgress, hideLoader } from './loader.js';
 import { createTooltip } from './tooltip.js';
+import { initOrbits } from './orbits.js';
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ async function boot() {
     await new Promise(r => setTimeout(r, 0));
 
     particleSystems = createParticleSystems(propagator, scene);
+    initOrbits(scene);
 
     ui = createUI(state, particleSystems, controls, propagator);
     ui.updateCounts(state.counts);

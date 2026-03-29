@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { VISUAL_CONFIG, PALETTE } from './config.js';
+import { setSelectedOrbit, clearSelectedOrbit } from './orbits.js';
 
 export function createTooltip(camera, scene, particleSystems, allSatData) {
   const isMobile = window.innerWidth < 768;
@@ -367,6 +368,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     selected = null;
     panel.style.display = 'none';
     panelImage.style.display = 'none';
+    clearSelectedOrbit();
     selectionRing.visible = false;
   }
 
@@ -431,6 +433,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
 
       const alt = computeAltitude(result.hit.point);
       showPanel(result.satData, result.category, alt);
+      setSelectedOrbit(result.satData, result.category, Date.now());
 
       updateRing(result.hit.point);
     } else if (!isMobile) {
