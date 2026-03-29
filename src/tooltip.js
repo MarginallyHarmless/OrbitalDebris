@@ -388,8 +388,35 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   // Persistent altitude element — updated every frame without rewriting the panel
   let altitudeSpan = null;
 
+  function closePanel() {
+    selected = null;
+    panel.style.display = 'none';
+    panelImage.style.display = 'none';
+    selectionRing.visible = false;
+  }
+
   function showPanel(satData, category, alt) {
     panel.innerHTML = '';
+
+    // Close button (always visible, especially important on mobile)
+    const closeBtn = document.createElement('div');
+    Object.assign(closeBtn.style, {
+      position: 'absolute',
+      top: '10px',
+      right: '12px',
+      cursor: 'pointer',
+      fontSize: '16px',
+      color: 'rgba(255,255,255,0.4)',
+      lineHeight: '1',
+      padding: '4px',
+      zIndex: '1',
+    });
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
+    closeBtn.addEventListener('touchend', (e) => { e.stopPropagation(); e.preventDefault(); closePanel(); });
+    panel.appendChild(closeBtn);
+    panel.style.position = 'fixed';
+    panel.style.paddingRight = '36px';
 
     // Reset and prepend image element
     panelImage.style.display = 'none';
@@ -434,10 +461,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
 
       updateRing(result.hit.point);
     } else {
-      selected = null;
-      panel.style.display = 'none';
-      panelImage.style.display = 'none';
-      selectionRing.visible = false;
+      closePanel();
     }
   }
 
