@@ -52,7 +52,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     position: 'fixed',
     bottom: '16px',
     right: '16px',
-    pointerEvents: 'none',
+    pointerEvents: 'auto',
     zIndex: '1000',
     background: 'rgba(0,0,0,0.9)',
     border: '1px solid rgba(0,229,255,0.4)',
@@ -67,6 +67,9 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     minWidth: '180px',
   });
   document.body.appendChild(panel);
+
+  // Clicks on panel should not deselect
+  panel.addEventListener('click', (e) => e.stopPropagation());
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -111,10 +114,19 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     const catLabel = category.replace(/([A-Z])/g, ' $1').trim().toUpperCase();
     const color = PALETTE[category] || '#00e5ff';
 
+    let nameHtml;
+    if (detailed && noradId !== '-----') {
+      // Clickable name linking to N2YO satellite info page
+      const n2yoUrl = `https://www.n2yo.com/satellite/?s=${noradId}`;
+      nameHtml = `<a href="${n2yoUrl}" target="_blank" rel="noopener" style="color:${color};text-decoration:none;border-bottom:1px solid ${color}40;cursor:pointer;pointer-events:auto">${name}</a>`;
+    } else {
+      nameHtml = name;
+    }
+
     let html =
-      `<div style="color:${color};margin-bottom:4px;font-size:11px">${name}</div>` +
+      `<div style="color:${color};margin-bottom:4px;font-size:11px">${nameHtml}</div>` +
       `<div>NORAD ${noradId}</div>` +
-      `<div>ALT: ${Math.round(Math.max(0, altitudeKm))} KM</div>` +
+      `<div data-alt>ALT: ${Math.round(Math.max(0, altitudeKm))} KM</div>` +
       `<div>TYPE: ${catLabel}</div>`;
 
     // Extra fields for the selection panel
@@ -347,7 +359,26 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     }
   }
 
+  // ── Drag detection — don't deselect after camera drag ──────────────────
+
+  let mouseDownPos = null;
+  const DRAG_THRESHOLD = 5; // pixels
+
+  window.addEventListener('mousedown', (e) => {
+    mouseDownPos = { x: e.clientX, y: e.clientY };
+  });
+
+  function wasDrag(event) {
+    if (!mouseDownPos) return false;
+    const dx = event.clientX - mouseDownPos.x;
+    const dy = event.clientY - mouseDownPos.y;
+    return Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD;
+  }
+
   // ── Click to select / deselect ──────────────────────────────────────────
+
+  // Persistent altitude element — updated every frame without rewriting the panel
+  let altitudeSpan = null;
 
   function showPanel(satData, category, alt) {
     panel.innerHTML = '';
@@ -364,6 +395,9 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
       formatInfo(satData, category, alt, true);
     panel.appendChild(textDiv);
 
+    // Grab reference to the altitude value for live updates
+    altitudeSpan = textDiv.querySelector('[data-alt]');
+
     panel.style.display = 'block';
 
     // Fetch satellite image async (ISS Tracker → Wikipedia fallback)
@@ -378,6 +412,9 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   }
 
   function onClick(event) {
+    // Ignore drags (camera orbit)
+    if (wasDrag(event)) return;
+
     const result = raycast(event.clientX, event.clientY);
 
     if (result) {
@@ -408,14 +445,11 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
 
       updateRing(pos);
 
-      // Update only the text portion, preserving the image
+      // Only update the altitude value — don't rewrite the panel (preserves links)
       const dist = pos.length();
       const alt = (dist - 1) * 6371;
-      const textDiv = panel.querySelector('div:last-child');
-      if (textDiv) {
-        textDiv.innerHTML =
-          `<div style="color:rgba(0,229,255,0.4);margin-bottom:6px;font-size:9px">SELECTED OBJECT</div>` +
-          formatInfo(selected.satData, selected.category, alt, true);
+      if (altitudeSpan) {
+        altitudeSpan.textContent = `ALT: ${Math.round(Math.max(0, alt))} KM`;
       }
     },
 
