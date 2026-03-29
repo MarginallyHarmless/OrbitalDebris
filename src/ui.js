@@ -246,6 +246,14 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   const countSpans = {};
 
+  // SVG icons matching particle shapes
+  const CATEGORY_ICONS = {
+    active: (color) => `<svg width="10" height="10" viewBox="0 0 10 10"><polygon points="5,0.5 9.5,5 5,9.5 0.5,5" fill="${color}"/></svg>`,
+    debris: (color) => `<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2,0.5 L5,3.5 L8,0.5 L9.5,2 L6.5,5 L9.5,8 L8,9.5 L5,6.5 L2,9.5 L0.5,8 L3.5,5 L0.5,2 Z" fill="${color}"/></svg>`,
+    rocketBody: (color) => `<svg width="10" height="10" viewBox="0 0 10 10"><polygon points="5,0.5 9.5,8.5 0.5,8.5" fill="${color}"/></svg>`,
+    station: (color) => `<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="2" fill="${color}"/><circle cx="5" cy="5" r="4" fill="none" stroke="${color}" stroke-width="1.2"/></svg>`,
+  };
+
   for (const cat of CATEGORIES) {
     const row = document.createElement('div');
     baseStyle(row);
@@ -256,14 +264,11 @@ export function createUI(state, particleSystems, controls, propagator) {
     row.style.padding = '3px 0';
     row.style.transition = 'opacity 0.15s';
 
-    const dot = document.createElement('span');
-    dot.style.display = 'inline-block';
-    dot.style.width = '8px';
-    dot.style.height = '8px';
-    dot.style.borderRadius = '50%';
-    dot.style.background = PALETTE[cat.key];
-    dot.style.flexShrink = '0';
-    dot.style.boxShadow = `0 0 4px ${PALETTE[cat.key]}60`;
+    const icon = document.createElement('span');
+    icon.style.display = 'inline-flex';
+    icon.style.flexShrink = '0';
+    icon.style.filter = `drop-shadow(0 0 3px ${PALETTE[cat.key]}60)`;
+    icon.innerHTML = CATEGORY_ICONS[cat.key](PALETTE[cat.key]);
 
     const label = document.createElement('span');
     label.textContent = cat.label;
@@ -275,7 +280,7 @@ export function createUI(state, particleSystems, controls, propagator) {
     count.textContent = formatCount(state.counts[cat.key] || 0);
     countSpans[cat.key] = count;
 
-    row.appendChild(dot);
+    row.appendChild(icon);
     row.appendChild(label);
     row.appendChild(count);
     hud.appendChild(row);

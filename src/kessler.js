@@ -61,7 +61,8 @@ export function createKesslerOverlay(scene) {
     webkitBackdropFilter: 'blur(12px)',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '8px',
-    padding: '10px 14px',
+    padding: '12px 16px',
+    maxWidth: '280px',
   });
   document.body.appendChild(legend);
 
@@ -73,8 +74,16 @@ export function createKesslerOverlay(scene) {
       .slice(0, 3);
 
     let html = '<div style="margin-bottom:6px;color:rgba(255,255,255,0.4);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Kessler Density</div>';
+
+    html += '<div style="color:rgba(255,255,255,0.35);font-size:10px;margin-bottom:8px;line-height:1.4;max-width:240px">' +
+      'The Kessler Syndrome describes a cascading chain reaction where collisions between objects create debris that causes further collisions, ' +
+      'potentially rendering orbital bands unusable. Red rings show the most congested altitude bands.' +
+      '</div>';
+
+    html += '<div style="margin-bottom:4px;color:rgba(255,255,255,0.4);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Densest Bands</div>';
+
     for (const entry of sorted) {
-      html += `<div style="color:rgba(255,255,255,0.6)">${Math.round(entry.alt)} km — ${entry.count.toLocaleString('en-US')}</div>`;
+      html += `<div style="color:rgba(255,255,255,0.6)">${Math.round(entry.alt)} km — ${entry.count.toLocaleString('en-US')} objects</div>`;
     }
     if (sorted.length === 0) {
       html += '<div>No data</div>';
