@@ -28,7 +28,7 @@ let frameCount = 0;
 
 async function boot() {
   // 1. Initialize Three.js scene
-  const { scene, camera, renderer, controls } = createScene();
+  const { scene, camera, renderer, controls, composer, sunLight, filmGrainPass } = createScene();
 
   // 2. Create Earth + atmosphere
   const { earthMesh, gridMesh } = createEarth(scene);
@@ -161,8 +161,11 @@ async function boot() {
     // Update selected object's live info
     tooltip.updateSelected(propagator);
 
-    // Render
-    renderer.render(scene, camera);
+    // Update film grain time
+    filmGrainPass.uniforms.uTime.value = performance.now() * 0.001;
+
+    // Render through post-processing pipeline
+    composer.render();
   }
 
   animate();
