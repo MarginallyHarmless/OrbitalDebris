@@ -126,7 +126,11 @@ function createPointMaterial(color, size, opacity, texture) {
       uMap:          { value: texture },
       uPixelRatio:   { value: PIXEL_RATIO },
       uScreenScale:  { value: SCREEN_SCALE },
-      uSunDirection: { value: new THREE.Vector3(5, 3, 5).normalize() },
+      uSunDirection:          { value: new THREE.Vector3(5, 3, 5).normalize() },
+      uTime:                  { value: 0 },
+      uTwinkleIntensity:      { value: VISUAL_CONFIG.particles.twinkleIntensity },
+      uTwinkleBaseSpeed:      { value: VISUAL_CONFIG.particles.twinkleBaseSpeed },
+      uTwinkleSpeedVariation: { value: VISUAL_CONFIG.particles.twinkleSpeedVariation },
     },
     vertexShader: `
       attribute float aSizeScale;
@@ -137,6 +141,7 @@ function createPointMaterial(color, size, opacity, texture) {
       uniform vec3 uSunDirection;
       varying float vSunFactor;
       varying float vDistance;
+      varying float vPhase;
       void main() {
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
         float dist = -mvPosition.z;
@@ -151,6 +156,9 @@ function createPointMaterial(color, size, opacity, texture) {
         vec3 posDir = normalize(position);
         vSunFactor = dot(posDir, normalize(uSunDirection));
 
+        // Per-particle phase for twinkling (reuse aSizeScale as deterministic seed)
+        vPhase = aSizeScale;
+
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -158,8 +166,13 @@ function createPointMaterial(color, size, opacity, texture) {
       uniform vec3 uColor;
       uniform float uOpacity;
       uniform sampler2D uMap;
+      uniform float uTime;
+      uniform float uTwinkleIntensity;
+      uniform float uTwinkleBaseSpeed;
+      uniform float uTwinkleSpeedVariation;
       varying float vSunFactor;
       varying float vDistance;
+      varying float vPhase;
       void main() {
         vec4 texColor = texture2D(uMap, gl_PointCoord);
 
@@ -171,7 +184,10 @@ function createPointMaterial(color, size, opacity, texture) {
         vec3 coolShift = vec3(0.85, 0.9, 1.15);
         vec3 tempShift = mix(coolShift, warmShift, smoothstep(-0.2, 0.4, vSunFactor));
 
-        vec3 color = uColor * brightness * tempShift;
+        // Twinkling: subtle per-particle brightness oscillation
+        float twinkle = 1.0 + uTwinkleIntensity * sin(uTime * (uTwinkleBaseSpeed + vPhase * uTwinkleSpeedVariation) + vPhase * 6.2831);
+
+        vec3 color = uColor * brightness * tempShift * twinkle;
 
         // Distance-based opacity fade (atmospheric depth cue)
         float distFade = smoothstep(20.0, 3.0, vDistance);

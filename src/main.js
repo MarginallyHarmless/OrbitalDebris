@@ -145,6 +145,12 @@ async function boot() {
       particleSystems[key].material.uniforms.uSunDirection.value.copy(sunDir);
     }
 
+    // Update particle time for twinkling
+    const particleTime = performance.now() * 0.001;
+    for (const key of ['active', 'debris', 'rocketBody', 'station']) {
+      particleSystems[key].material.uniforms.uTime.value = particleTime;
+    }
+
     // Rotate clouds independently
     cloudMesh.rotation.y += dt * VISUAL_CONFIG.clouds.rotationSpeed;
 
