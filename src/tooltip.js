@@ -66,25 +66,13 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     display: 'none',
     borderRadius: '10px',
     overflowY: 'auto',
+    // Same left positioning as HUD, placed at bottom
+    left: '16px',
+    bottom: '16px',
+    maxWidth: isMobile ? 'calc(100vw - 32px)' : '280px',
+    minWidth: isMobile ? '0' : '200px',
+    maxHeight: isMobile ? '35vh' : '50vh',
   });
-
-  if (isMobile) {
-    // Mobile: bottom of screen, full width with margin
-    panel.style.position = 'fixed';
-    panel.style.bottom = '0';
-    panel.style.left = '0';
-    panel.style.right = '0';
-    panel.style.maxHeight = '40vh';
-    panel.style.borderRadius = '12px 12px 0 0';
-  } else {
-    // Desktop: bottom-right corner
-    panel.style.bottom = '16px';
-    panel.style.right = '16px';
-    panel.style.minWidth = '200px';
-    panel.style.maxWidth = '280px';
-    panel.style.maxHeight = '80vh';
-  }
-
   document.body.appendChild(panel);
 
   // Clicks/taps on panel should not deselect
