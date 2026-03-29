@@ -97,6 +97,11 @@ async function boot() {
   const PROP_INTERVAL_MS = 2000; // real-time ms between keyframe computations
   let nextPropAt = performance.now() + PROP_INTERVAL_MS;
 
+  // Expose a way to reset the propagation timer (called after year slider reset)
+  state.resetPropTimer = () => {
+    nextPropAt = performance.now() + PROP_INTERVAL_MS;
+  };
+
   // Pre-compute the first future keyframe so we have A=now, B=future
   const simIntervalMs = PROP_INTERVAL_MS * state.timeScale; // sim-time gap per interval
   propagator.propagateNext(

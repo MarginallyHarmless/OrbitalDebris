@@ -188,6 +188,7 @@ export function createUI(state, particleSystems, controls, propagator) {
       propagator.setYearFilter(year);
       state.simTime = new Date(year, 6, 1);
       propagator.propagateAll(state.simTime);
+      if (state.resetPropTimer) state.resetPropTimer();
       const fc = propagator.getCounts();
       updateCountsInternal(fc);
     }
@@ -195,6 +196,13 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   yearSlider.addEventListener('input', () => {
     const year = parseInt(yearSlider.value, 10);
+
+    // If slider reaches max, auto-reset (same as clicking ✕)
+    if (year >= MAX_YEAR) {
+      yearResetBtn.click();
+      return;
+    }
+
     yearReadout.textContent = String(year);
     yearResetBtn.style.opacity = '0.7';
 
@@ -222,6 +230,7 @@ export function createUI(state, particleSystems, controls, propagator) {
       propagator.setYearFilter(null);
       state.simTime = savedSimTime || new Date();
       propagator.propagateAll(state.simTime);
+      if (state.resetPropTimer) state.resetPropTimer();
       const fc = propagator.getCounts();
       updateCountsInternal(fc);
     }
