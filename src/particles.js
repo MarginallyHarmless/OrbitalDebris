@@ -110,7 +110,7 @@ const OPACITY = {
   station:    1.0,
 };
 
-const MIN_PIXEL_SIZE = 2.0;
+const MIN_PIXEL_SIZE = 3.0;
 
 const CATEGORIES = ['active', 'debris', 'rocketBody', 'station'];
 
