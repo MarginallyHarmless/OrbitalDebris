@@ -48,14 +48,13 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   document.body.appendChild(tooltip);
 
   // ── Selection panel (fixed position, stays open) ────────────────────────
+  const isMobile = window.innerWidth < 768;
   const panel = document.createElement('div');
   Object.assign(panel.style, {
     position: 'fixed',
-    bottom: '16px',
-    right: '16px',
     pointerEvents: 'auto',
     zIndex: '1000',
-    background: 'rgba(10, 12, 20, 0.7)',
+    background: 'rgba(10, 12, 20, 0.8)',
     backdropFilter: 'blur(16px)',
     webkitBackdropFilter: 'blur(16px)',
     border: '1px solid rgba(255,255,255,0.1)',
@@ -65,8 +64,11 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     letterSpacing: '0.02em',
     color: 'rgba(255,255,255,0.7)',
     display: 'none',
-    borderRadius: '10px',
-    minWidth: '200px',
+    borderRadius: isMobile ? '10px 10px 0 0' : '10px',
+    ...(isMobile
+      ? { bottom: '0', left: '0', right: '0', maxHeight: '40vh', overflowY: 'auto' }
+      : { bottom: '16px', right: '16px', minWidth: '200px', maxWidth: '280px' }
+    ),
   });
   document.body.appendChild(panel);
 
@@ -437,8 +439,36 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     }
   }
 
-  window.addEventListener('mousemove', onMouseMove);
+  // Desktop: hover + click
+  if (!isMobile) {
+    window.addEventListener('mousemove', onMouseMove);
+  }
   window.addEventListener('click', onClick);
+
+  // Mobile: also handle touch-tap (touchend after short touch = tap)
+  if (isMobile) {
+    let touchStart = null;
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+      } else {
+        touchStart = null;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (!touchStart) return;
+      const dt = Date.now() - touchStart.time;
+      if (dt > 300) { touchStart = null; return; } // too long = not a tap
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStart.x;
+      const dy = touch.clientY - touchStart.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 15) { touchStart = null; return; } // dragged
+      // Simulate click for raycast
+      onClick({ clientX: touch.clientX, clientY: touch.clientY });
+      touchStart = null;
+    });
+  }
 
   return {
     // Called from animation loop — updates ring position and panel altitude
