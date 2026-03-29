@@ -19,10 +19,10 @@ export const VISUAL_CONFIG = {
   palette: { ...PALETTE },
 
   pointSizes: {
-    station:    0.04,
-    rocketBody: 0.02,
-    active:     0.012,
-    debris:     0.014,
+    station:    0.03,
+    rocketBody: 0.015,
+    active:     0.009,
+    debris:     0.01,
   },
 
   earth: {

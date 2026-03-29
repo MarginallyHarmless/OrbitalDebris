@@ -351,10 +351,6 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   let mouseDownPos = null;
   const DRAG_THRESHOLD = 5; // pixels
 
-  window.addEventListener('mousedown', (e) => {
-    mouseDownPos = { x: e.clientX, y: e.clientY };
-  });
-
   function wasDrag(event) {
     if (!mouseDownPos) return false;
     const dx = event.clientX - mouseDownPos.x;
@@ -468,7 +464,10 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
       touchStart = null;
     });
   } else {
-    // Desktop: hover + click
+    // Desktop: hover + click + drag detection
+    window.addEventListener('mousedown', (e) => {
+      mouseDownPos = { x: e.clientX, y: e.clientY };
+    });
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('click', onClick);
   }
