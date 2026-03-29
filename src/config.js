@@ -109,7 +109,7 @@ export const VISUAL_CONFIG = {
   },
 
   filmGrain: {
-    enabled: true,
+    enabled: false,
     opacity: 0.04,
   },
 
