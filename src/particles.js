@@ -107,7 +107,9 @@ const OPACITY = {
   station:    0.9,
 };
 
-const MIN_PIXEL_SIZE = Math.min(window.innerWidth, window.innerHeight) < 768 ? 1.5 : 3.0;
+const IS_MOBILE = Math.min(window.innerWidth, window.innerHeight) < 768;
+const MIN_PIXEL_SIZE = IS_MOBILE ? 1.5 : 3.0;
+const SCREEN_SCALE = IS_MOBILE ? 0.5 : 1.0;
 
 const CATEGORIES = ['active', 'debris', 'rocketBody', 'station'];
 
@@ -122,6 +124,7 @@ function createPointMaterial(color, size, opacity, texture) {
       uOpacity:      { value: opacity },
       uMap:          { value: texture },
       uPixelRatio:   { value: Math.min(window.devicePixelRatio, 2) },
+      uScreenScale:  { value: SCREEN_SCALE },
       uSunDirection: { value: new THREE.Vector3(5, 3, 5).normalize() },
     },
     vertexShader: `
@@ -129,6 +132,7 @@ function createPointMaterial(color, size, opacity, texture) {
       uniform float uSize;
       uniform float uMinSize;
       uniform float uPixelRatio;
+      uniform float uScreenScale;
       uniform vec3 uSunDirection;
       varying float vSunFactor;
       varying float vDistance;
@@ -137,8 +141,8 @@ function createPointMaterial(color, size, opacity, texture) {
         float dist = -mvPosition.z;
         vDistance = dist;
 
-        // Size variation from per-particle attribute
-        float scaledSize = uSize * aSizeScale;
+        // Size variation from per-particle attribute, scaled down on mobile
+        float scaledSize = uSize * aSizeScale * uScreenScale;
         float attenSize = scaledSize * uPixelRatio * (500.0 / sqrt(dist));
         gl_PointSize = max(attenSize, uMinSize * uPixelRatio);
 
