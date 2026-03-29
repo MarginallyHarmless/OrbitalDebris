@@ -122,11 +122,12 @@ export function createScene() {
   composer.addPass(renderPass);
 
   const bloomCfg = VISUAL_CONFIG.bloom;
+  const isMobile = Math.min(window.innerWidth, window.innerHeight) < 768;
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    bloomCfg.strength,
-    bloomCfg.radius,
-    bloomCfg.threshold,
+    isMobile ? bloomCfg.strength * 0.4 : bloomCfg.strength,
+    isMobile ? bloomCfg.radius * 0.5 : bloomCfg.radius,
+    isMobile ? 0.92 : bloomCfg.threshold,
   );
   composer.addPass(bloomPass);
 
