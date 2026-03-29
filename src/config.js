@@ -32,9 +32,10 @@ export const VISUAL_CONFIG = {
   },
 
   atmosphere: {
-    radius:     1.02,
-    opacity:    0.08,
-    color:      PALETTE.atmosphere,
+    radius:     1.04,
+    opacity:    0.45,
+    color:      '#4488cc',
+    sunsetColor: '#ff6633',
   },
 
   starfield: {
@@ -77,6 +78,30 @@ export const VISUAL_CONFIG = {
     bandWidth:  50,
     color:      PALETTE.densityRing,
     maxOpacity: 0.35,
+  },
+
+  sun: {
+    color: '#fff5e0',
+    intensity: 2.0,
+    direction: [5, 3, 5],
+    rotationSpeed: 0.01,
+  },
+
+  clouds: {
+    radius: 1.005,
+    opacity: 0.35,
+    rotationSpeed: 0.002,
+  },
+
+  bloom: {
+    strength: 0.8,
+    radius: 0.6,
+    threshold: 0.7,
+  },
+
+  filmGrain: {
+    enabled: true,
+    opacity: 0.04,
   },
 
   ui: {
