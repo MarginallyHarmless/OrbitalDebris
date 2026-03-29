@@ -29,6 +29,7 @@ export const VISUAL_CONFIG = {
     radius:     1.0,
     segments:   64,
     color:      PALETTE.earth,
+    normalMapStrength: 1.5,
   },
 
   atmosphere: {
@@ -91,6 +92,14 @@ export const VISUAL_CONFIG = {
     radius: 1.005,
     opacity: 0.12,
     rotationSpeed: 0.002,
+  },
+
+  particles: {
+    twinkleIntensity: 0.15,
+    twinkleBaseSpeed: 1.5,
+    twinkleSpeedVariation: 2.0,
+    glintExponent: 64.0,
+    glintStrength: 2.0,
   },
 
   bloom: {
