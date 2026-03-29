@@ -26,7 +26,8 @@ export function createEarth(scene) {
       varying vec2 vUv;
       void main() {
         vUv = uv;
-        vNormal = normalize(normalMatrix * normal);
+        // World-space normal so terminator stays fixed regardless of camera
+        vNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
         vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
@@ -53,23 +54,17 @@ export function createEarth(scene) {
         vec3 dayColor = texture2D(uDayMap, vUv).rgb;
         vec3 nightColor = texture2D(uNightMap, vUv).rgb;
 
+        // Darken and desaturate the day side — moody, not a geography lesson
+        float dayLum = dot(dayColor, vec3(0.299, 0.587, 0.114));
+        dayColor = mix(vec3(dayLum), dayColor, 0.5) * 0.55;
+        // Tint slightly blue
+        dayColor *= vec3(0.75, 0.85, 1.0);
+
         // Night lights: boost city lights visibility
         nightColor *= 1.8;
 
         // Blend day and night
         vec3 color = mix(nightColor, dayColor, dayFactor);
-
-        // Specular ocean glint — oceans are dark in Blue Marble (luminance < 0.25)
-        float luminance = dot(dayColor, vec3(0.299, 0.587, 0.114));
-        float isOcean = 1.0 - smoothstep(0.08, 0.25, luminance);
-        vec3 viewDir = normalize(cameraPosition - vPosition);
-        vec3 halfDir = normalize(sunDir + viewDir);
-        float spec = pow(max(dot(normal, halfDir), 0.0), 120.0);
-        color += vec3(0.95, 0.9, 0.8) * spec * isOcean * dayFactor * 0.8;
-
-        // Warm terminator glow — atmospheric scattering at the day/night boundary
-        float terminatorGlow = exp(-pow((NdotL - 0.0) / 0.12, 2.0));
-        color += vec3(0.8, 0.3, 0.1) * terminatorGlow * 0.15;
 
         gl_FragColor = vec4(color, 1.0);
       }
