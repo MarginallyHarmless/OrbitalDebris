@@ -152,7 +152,11 @@ export async function fetchAllTLEs(onProgress) {
       if (noradId && seenIds.has(noradId)) continue; // skip if already from Astria
       if (noradId) seenIds.add(noradId);
 
-      baseResult[source.category].push(record);
+      // Re-categorize by name instead of trusting source group
+      const actualCategory = categorizeByName(record.name || '', noradId || 0);
+      record.category = actualCategory;
+
+      baseResult[actualCategory].push(record);
       baseResult.all.push(record);
       celestrakAdded++;
     }
