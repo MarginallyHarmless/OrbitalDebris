@@ -62,12 +62,12 @@ function baseStyle(el) {
 function sectionLabel(text) {
   const el = document.createElement('div');
   baseStyle(el);
-  el.style.fontSize = '10px';
-  el.style.fontWeight = '500';
+  el.style.fontSize = '9px';
+  el.style.fontWeight = '300';
   el.style.textTransform = 'uppercase';
-  el.style.letterSpacing = '0.1em';
+  el.style.letterSpacing = '0.12em';
   el.style.color = VISUAL_CONFIG.ui.colorDim;
-  el.style.marginBottom = '6px';
+  el.style.marginBottom = '8px';
   el.textContent = text;
   return el;
 }
@@ -75,8 +75,8 @@ function sectionLabel(text) {
 function createDivider() {
   const div = document.createElement('div');
   div.style.height = '1px';
-  div.style.background = 'rgba(255, 255, 255, 0.06)';
-  div.style.margin = '10px 0';
+  div.style.background = 'rgba(255, 255, 255, 0.04)';
+  div.style.margin = '14px 0';
   return div;
 }
 
@@ -105,9 +105,11 @@ export function createUI(state, particleSystems, controls, propagator) {
   const title = document.createElement('div');
   title.textContent = 'Orbital Debris Field';
   baseStyle(title);
-  title.style.fontSize = '15px';
-  title.style.fontWeight = '700';
+  title.style.fontSize = '13px';
+  title.style.fontWeight = '300';
   title.style.color = VISUAL_CONFIG.ui.colorBright;
+  title.style.letterSpacing = '0.15em';
+  title.style.textTransform = 'uppercase';
 
   const collapseBtn = document.createElement('span');
   baseStyle(collapseBtn);
@@ -527,7 +529,8 @@ export function createUI(state, particleSystems, controls, propagator) {
   // ── Total count ────────────────────────────────────────────────────────────
   const totalDiv = document.createElement('div');
   baseStyle(totalDiv);
-  totalDiv.style.fontWeight = '500';
+  totalDiv.style.fontWeight = '300';
+  totalDiv.style.letterSpacing = '0.1em';
   totalDiv.textContent = formatCount(state.counts.total || 0) + ' tracked';
   content.appendChild(totalDiv);
 

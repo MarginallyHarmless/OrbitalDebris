@@ -39,7 +39,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     webkitBackdropFilter: 'blur(12px)',
     border: '1px solid rgba(255,255,255,0.1)',
     padding: '8px 12px',
-    fontFamily: "'Satoshi', sans-serif",
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize: '11px',
     letterSpacing: '0.02em',
     color: 'rgba(255,255,255,0.8)',
