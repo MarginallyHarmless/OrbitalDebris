@@ -131,6 +131,8 @@ function createPointMaterial(color, size, opacity, texture) {
       uTwinkleIntensity:      { value: VISUAL_CONFIG.particles.twinkleIntensity },
       uTwinkleBaseSpeed:      { value: VISUAL_CONFIG.particles.twinkleBaseSpeed },
       uTwinkleSpeedVariation: { value: VISUAL_CONFIG.particles.twinkleSpeedVariation },
+      uGlintExponent: { value: VISUAL_CONFIG.particles.glintExponent },
+      uGlintStrength: { value: VISUAL_CONFIG.particles.glintStrength },
     },
     vertexShader: `
       attribute float aSizeScale;
@@ -142,6 +144,7 @@ function createPointMaterial(color, size, opacity, texture) {
       varying float vSunFactor;
       varying float vDistance;
       varying float vPhase;
+      varying float vGlintFactor;
       void main() {
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
         float dist = -mvPosition.z;
@@ -156,8 +159,13 @@ function createPointMaterial(color, size, opacity, texture) {
         vec3 posDir = normalize(position);
         vSunFactor = dot(posDir, normalize(uSunDirection));
 
-        // Per-particle phase for twinkling (reuse aSizeScale as deterministic seed)
+        // Per-particle phase for twinkling
         vPhase = aSizeScale;
+
+        // Specular glint: reflection of sun off particle toward camera
+        vec3 reflectDir = reflect(-normalize(uSunDirection), posDir);
+        vec3 viewDir = normalize(cameraPosition - position);
+        vGlintFactor = dot(viewDir, reflectDir);
 
         gl_Position = projectionMatrix * mvPosition;
       }
@@ -170,9 +178,12 @@ function createPointMaterial(color, size, opacity, texture) {
       uniform float uTwinkleIntensity;
       uniform float uTwinkleBaseSpeed;
       uniform float uTwinkleSpeedVariation;
+      uniform float uGlintExponent;
+      uniform float uGlintStrength;
       varying float vSunFactor;
       varying float vDistance;
       varying float vPhase;
+      varying float vGlintFactor;
       void main() {
         vec4 texColor = texture2D(uMap, gl_PointCoord);
 
@@ -188,6 +199,10 @@ function createPointMaterial(color, size, opacity, texture) {
         float twinkle = 1.0 + uTwinkleIntensity * sin(uTime * (uTwinkleBaseSpeed + vPhase * uTwinkleSpeedVariation) + vPhase * 6.2831);
 
         vec3 color = uColor * brightness * tempShift * twinkle;
+
+        // Specular glint: rare bright flash when sun reflects toward camera
+        float glint = pow(max(0.0, vGlintFactor), uGlintExponent) * uGlintStrength;
+        color += glint;
 
         // Distance-based opacity fade (atmospheric depth cue)
         float distFade = smoothstep(20.0, 3.0, vDistance);
