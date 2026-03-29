@@ -18,10 +18,16 @@ export function parseTLE(text, category) {
       const satrec = satellite.twoline2satrec(line1, line2);
       if (satrec.error !== 0) continue;
 
+      // Extract launch year from international designator (columns 10-11 of line 1)
+      const yy = parseInt(line1.substring(9, 11));
+      const launchYear = isNaN(yy) ? 0 : (yy >= 57 ? 1900 + yy : 2000 + yy);
+      const launchDate = launchYear > 0 ? `${launchYear}` : '';
+
       results.push({
         name: name.trim(),
         satrec,
-        category
+        category,
+        launchDate,
       });
     } catch {
       continue;
