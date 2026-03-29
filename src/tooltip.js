@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { VISUAL_CONFIG, PALETTE } from './config.js';
 
 export function createTooltip(camera, scene, particleSystems, allSatData) {
+  const isMobile = window.innerWidth < 768;
   const raycaster = new THREE.Raycaster();
-  raycaster.params.Points.threshold = 0.02;
+  raycaster.params.Points.threshold = isMobile ? 0.06 : 0.02;
 
   const mouse = new THREE.Vector2();
   const categories = ['active', 'debris', 'rocketBody', 'station'];
@@ -48,7 +49,6 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   document.body.appendChild(tooltip);
 
   // ── Selection panel (defined in index.html CSS, just grab it) ──────────
-  const isMobile = window.innerWidth < 768;
   const panel = document.getElementById('selection-panel');
 
   // Clicks/taps on panel should not deselect
