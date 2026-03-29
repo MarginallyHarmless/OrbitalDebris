@@ -25,16 +25,30 @@ export function createPropagator(categorizedData) {
   }
   counts.total = total;
 
+  // Build flat list with launch year for filtering
   const allSats = [];
   for (const cat of categories) {
     const satList = categorizedData[cat] || [];
     for (let i = 0; i < satList.length; i++) {
-      allSats.push({ sat: satList[i], category: cat, index: i });
+      const sat = satList[i];
+      let launchYear = 0;
+      if (sat.launchDate) {
+        launchYear = parseInt(sat.launchDate.substring(0, 4)) || 0;
+      }
+      allSats.push({ sat, category: cat, index: i, launchYear });
     }
   }
 
   let keyframeTimeA = 0;
   let keyframeTimeB = 0;
+
+  // Year filter: null = show all, number = only show objects launched <= that year
+  let yearFilter = null;
+  // Per-object visibility mask based on year filter
+  const visibleMask = {}; // category -> Uint8Array
+  for (const cat of categories) {
+    visibleMask[cat] = new Uint8Array((categorizedData[cat] || []).length).fill(1);
+  }
 
   function propagateSingle(entry, date, gmst, targetBuffers) {
     const { sat, category, index } = entry;
@@ -45,7 +59,6 @@ export function createPropagator(categorizedData) {
     let posEci = null;
 
     if (sat.kepler) {
-      // Keplerian propagation (AstriaGraph data)
       const k = sat.kepler;
       try {
         posEci = keplerToEci(k.sma, k.ecc, k.inc, k.raan, k.argp, k.ma, k.epochMs, date.getTime());
@@ -53,7 +66,6 @@ export function createPropagator(categorizedData) {
         posEci = null;
       }
     } else if (sat.satrec && sat.satrec.no !== undefined) {
-      // SGP4 propagation (TLE data)
       try {
         const pv = satellite.propagate(sat.satrec, date);
         posEci = pv.position;
@@ -93,6 +105,7 @@ export function createPropagator(categorizedData) {
     }
     keyframeTimeA = date.getTime();
     keyframeTimeB = date.getTime();
+    applyYearFilter();
   }
 
   function propagateNext(date) {
@@ -114,12 +127,61 @@ export function createPropagator(categorizedData) {
       const a = posBufferA[cat];
       const b = posBufferB[cat];
       const out = positionBuffers[cat];
-      const len = out.length;
+      const mask = visibleMask[cat];
+      const len = out.length / 3;
 
       for (let i = 0; i < len; i++) {
-        out[i] = a[i] + (b[i] - a[i]) * t;
+        const o = i * 3;
+        if (mask[i]) {
+          out[o]     = a[o]     + (b[o]     - a[o])     * t;
+          out[o + 1] = a[o + 1] + (b[o + 1] - a[o + 1]) * t;
+          out[o + 2] = a[o + 2] + (b[o + 2] - a[o + 2]) * t;
+        } else {
+          out[o] = 0;
+          out[o + 1] = 0;
+          out[o + 2] = 0;
+        }
       }
     }
+  }
+
+  function applyYearFilter() {
+    if (yearFilter === null) {
+      // Show all
+      for (const cat of categories) {
+        visibleMask[cat].fill(1);
+      }
+    } else {
+      for (const entry of allSats) {
+        const { category, index, launchYear } = entry;
+        // Show if launched on or before the selected year
+        // Hide objects without launch data when filtering (only ~1.8% of catalog)
+        visibleMask[category][index] = (launchYear > 0 && launchYear <= yearFilter) ? 1 : 0;
+      }
+    }
+  }
+
+  function setYearFilter(year) {
+    yearFilter = year;
+    applyYearFilter();
+  }
+
+  function getYearFilter() {
+    return yearFilter;
+  }
+
+  function getFilteredCounts() {
+    const fc = { active: 0, debris: 0, rocketBody: 0, station: 0, total: 0 };
+    for (const cat of categories) {
+      const mask = visibleMask[cat];
+      let c = 0;
+      for (let i = 0; i < mask.length; i++) {
+        if (mask[i]) c++;
+      }
+      fc[cat] = c;
+      fc.total += c;
+    }
+    return fc;
   }
 
   function getPositionBuffers() {
@@ -131,8 +193,8 @@ export function createPropagator(categorizedData) {
   }
 
   function getCounts() {
-    return { ...counts };
+    return yearFilter !== null ? getFilteredCounts() : { ...counts };
   }
 
-  return { propagateAll, propagateNext, interpolate, getPositionBuffers, getAltitudes, getCounts };
+  return { propagateAll, propagateNext, interpolate, getPositionBuffers, getAltitudes, getCounts, setYearFilter, getYearFilter };
 }

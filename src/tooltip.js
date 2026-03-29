@@ -105,18 +105,32 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     return (dist - 1) * 6371;
   }
 
-  function formatInfo(satData, category, altitudeKm) {
+  function formatInfo(satData, category, altitudeKm, detailed) {
     const name = satData.name || 'UNKNOWN';
     const noradId = satData.satrec ? satData.satrec.satnum : '-----';
     const catLabel = category.replace(/([A-Z])/g, ' $1').trim().toUpperCase();
     const color = PALETTE[category] || '#00e5ff';
 
-    return (
+    let html =
       `<div style="color:${color};margin-bottom:4px;font-size:11px">${name}</div>` +
       `<div>NORAD ${noradId}</div>` +
       `<div>ALT: ${Math.round(Math.max(0, altitudeKm))} KM</div>` +
-      `<div>TYPE: ${catLabel}</div>`
-    );
+      `<div>TYPE: ${catLabel}</div>`;
+
+    // Extra fields for the selection panel
+    if (detailed) {
+      if (satData.country) {
+        html += `<div style="margin-top:4px">ORIGIN: ${satData.country}</div>`;
+      }
+      if (satData.launchDate) {
+        html += `<div>LAUNCHED: ${satData.launchDate}</div>`;
+      }
+      if (satData.launchMass) {
+        html += `<div>MASS: ${satData.launchMass} KG</div>`;
+      }
+    }
+
+    return html;
   }
 
   // ── Wikipedia image lookup ──────────────────────────────────────────────
@@ -347,7 +361,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     const textDiv = document.createElement('div');
     textDiv.innerHTML =
       `<div style="color:rgba(0,229,255,0.4);margin-bottom:6px;font-size:9px">SELECTED OBJECT</div>` +
-      formatInfo(satData, category, alt);
+      formatInfo(satData, category, alt, true);
     panel.appendChild(textDiv);
 
     panel.style.display = 'block';
@@ -401,7 +415,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
       if (textDiv) {
         textDiv.innerHTML =
           `<div style="color:rgba(0,229,255,0.4);margin-bottom:6px;font-size:9px">SELECTED OBJECT</div>` +
-          formatInfo(selected.satData, selected.category, alt);
+          formatInfo(selected.satData, selected.category, alt, true);
       }
     },
 

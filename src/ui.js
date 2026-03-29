@@ -16,7 +16,27 @@ function formatCount(n) {
 }
 
 function injectStyles() {
-  // No additional styles needed currently
+  const style = document.createElement('style');
+  style.textContent = `
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 1px;
+  background: rgba(0, 229, 255, 0.2);
+  outline: none;
+  margin: 6px 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  background: #00e5ff;
+  cursor: pointer;
+}
+`;
+  document.head.appendChild(style);
 }
 
 function baseStyle(el) {
@@ -38,7 +58,7 @@ function createSeparator() {
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export function createUI(state, particleSystems, controls) {
+export function createUI(state, particleSystems, controls, propagator) {
   injectStyles();
 
   const hud = document.getElementById('hud');
@@ -92,6 +112,77 @@ export function createUI(state, particleSystems, controls) {
   });
 
   hud.appendChild(playBtn);
+
+  // ── Separator ──────────────────────────────────────────────────────────────
+  hud.appendChild(createSeparator());
+
+  // ── Year slider ──────────────────────────────────────────────────────────
+  const MIN_YEAR = 1957;
+  const MAX_YEAR = new Date().getFullYear();
+
+  const yearLabel = document.createElement('div');
+  baseStyle(yearLabel);
+  yearLabel.textContent = 'LAUNCH YEAR';
+  hud.appendChild(yearLabel);
+
+  const yearRow = document.createElement('div');
+  yearRow.style.display = 'flex';
+  yearRow.style.alignItems = 'center';
+  yearRow.style.gap = '8px';
+
+  const yearSlider = document.createElement('input');
+  yearSlider.type = 'range';
+  yearSlider.min = String(MIN_YEAR);
+  yearSlider.max = String(MAX_YEAR);
+  yearSlider.value = String(MAX_YEAR);
+  yearSlider.style.width = '120px';
+
+  const yearReadout = document.createElement('span');
+  baseStyle(yearReadout);
+  yearReadout.textContent = 'ALL';
+
+  const yearResetBtn = document.createElement('span');
+  baseStyle(yearResetBtn);
+  yearResetBtn.textContent = '✕';
+  yearResetBtn.style.cursor = 'pointer';
+  yearResetBtn.style.opacity = '0.3';
+  yearResetBtn.style.pointerEvents = 'auto';
+  yearResetBtn.style.fontSize = '9px';
+
+  let yearActive = false;
+
+  function applyYear(year) {
+    if (propagator) {
+      propagator.setYearFilter(year);
+      const fc = propagator.getCounts();
+      updateCountsInternal(fc);
+    }
+  }
+
+  yearSlider.addEventListener('input', () => {
+    const year = parseInt(yearSlider.value, 10);
+    yearReadout.textContent = String(year);
+    yearResetBtn.style.opacity = '0.8';
+    yearActive = true;
+    applyYear(year);
+  });
+
+  yearResetBtn.addEventListener('click', () => {
+    yearSlider.value = String(MAX_YEAR);
+    yearReadout.textContent = 'ALL';
+    yearResetBtn.style.opacity = '0.3';
+    yearActive = false;
+    if (propagator) {
+      propagator.setYearFilter(null);
+      const fc = propagator.getCounts();
+      updateCountsInternal(fc);
+    }
+  });
+
+  yearRow.appendChild(yearSlider);
+  yearRow.appendChild(yearReadout);
+  yearRow.appendChild(yearResetBtn);
+  hud.appendChild(yearRow);
 
   // ── Separator ──────────────────────────────────────────────────────────────
   hud.appendChild(createSeparator());
@@ -153,6 +244,52 @@ export function createUI(state, particleSystems, controls) {
   totalDiv.textContent = 'TOTAL TRACKED: ' + formatCount(state.counts.total || 0);
   hud.appendChild(totalDiv);
 
+  // ── Data source ───────────────────────────────────────────────────────────
+  const SOURCE_LINKS = {
+    'CELESTRAK': 'https://celestrak.org',
+    'ASTRIAGRAPH / UT AUSTIN': 'http://astria.tacc.utexas.edu/AstriaGraph/',
+    'ASTRIAGRAPH + CELESTRAK': null, // multiple links below
+    'SPACE-TRACK.ORG': 'https://www.space-track.org',
+  };
+
+  const sourceDiv = document.createElement('div');
+  baseStyle(sourceDiv);
+  sourceDiv.style.marginTop = '6px';
+  sourceDiv.style.fontSize = '10px';
+  sourceDiv.style.opacity = '0.6';
+
+  sourceDiv.appendChild(document.createTextNode('SOURCE: '));
+
+  const sourceName = state.dataSource || '---';
+
+  function makeLink(text, url) {
+    const a = document.createElement('a');
+    a.textContent = text;
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.style.color = VISUAL_CONFIG.ui.color;
+    a.style.textDecoration = 'none';
+    a.style.borderBottom = '1px solid rgba(0, 229, 255, 0.3)';
+    a.style.pointerEvents = 'auto';
+    return a;
+  }
+
+  if (sourceName === 'ASTRIAGRAPH + CELESTRAK') {
+    sourceDiv.appendChild(makeLink('ASTRIAGRAPH', 'http://astria.tacc.utexas.edu/AstriaGraph/'));
+    sourceDiv.appendChild(document.createTextNode(' + '));
+    sourceDiv.appendChild(makeLink('CELESTRAK', 'https://celestrak.org'));
+  } else {
+    const sourceUrl = SOURCE_LINKS[sourceName];
+    if (sourceUrl) {
+      sourceDiv.appendChild(makeLink(sourceName, sourceUrl));
+    } else {
+      sourceDiv.appendChild(document.createTextNode(sourceName));
+    }
+  }
+
+  hud.appendChild(sourceDiv);
+
   // ── Kessler toggle hint ────────────────────────────────────────────────────
   const kesslerHint = document.createElement('div');
   baseStyle(kesslerHint);
@@ -160,6 +297,15 @@ export function createUI(state, particleSystems, controls) {
   kesslerHint.style.opacity = state.kesslerVisible ? '0.8' : '0.3';
   kesslerHint.textContent = '[K] KESSLER OVERLAY';
   hud.appendChild(kesslerHint);
+
+  // ── Shared count updater ───────────────────────────────────────────────────
+
+  function updateCountsInternal(counts) {
+    for (const cat of CATEGORIES) {
+      countSpans[cat.key].textContent = formatCount(counts[cat.key] || 0);
+    }
+    totalDiv.textContent = 'TOTAL TRACKED: ' + formatCount(counts.total || 0);
+  }
 
   // ── Return update API ─────────────────────────────────────────────────────
 
@@ -169,10 +315,7 @@ export function createUI(state, particleSystems, controls) {
     },
 
     updateCounts(counts) {
-      for (const cat of CATEGORIES) {
-        countSpans[cat.key].textContent = formatCount(counts[cat.key] || 0);
-      }
-      totalDiv.textContent = 'TOTAL TRACKED: ' + formatCount(counts.total || 0);
+      updateCountsInternal(counts);
     },
 
     setKesslerState(visible) {

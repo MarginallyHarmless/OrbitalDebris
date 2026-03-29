@@ -47,6 +47,7 @@ async function boot() {
     return;
   }
 
+  state.dataSource = catalogData.source || 'UNKNOWN';
   updateProgress(0.9, 'PROPAGATING ORBITS...');
 
   // 4. Create propagator and run initial propagation
@@ -62,7 +63,7 @@ async function boot() {
   const particleSystems = createParticleSystems(propagator, scene);
 
   // 7. Create UI
-  const ui = createUI(state, particleSystems, controls);
+  const ui = createUI(state, particleSystems, controls, propagator);
   ui.updateCounts(state.counts);
   ui.updateTime(state.simTime);
 

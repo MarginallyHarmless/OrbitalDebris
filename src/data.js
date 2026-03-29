@@ -106,16 +106,26 @@ export async function fetchAllTLEs(onProgress) {
 
   // 1. Try local full TLE catalog (pre-downloaded from Space-Track.org)
   const fullCatalog = await tryLoadFullCatalog(onProgress);
-  if (fullCatalog) return fullCatalog;
+  if (fullCatalog) { fullCatalog.source = 'SPACE-TRACK.ORG'; return fullCatalog; }
 
-  // 2. Try AstriaGraph catalog (prebaked Keplerian elements, ~27k objects)
+  // 2. Try AstriaGraph catalog, then supplement with Celestrak live data
   const astriaCatalog = await tryLoadAstriaCatalog(onProgress);
-  if (astriaCatalog) return astriaCatalog;
 
-  // 3. Fall back to Celestrak groups
-  console.log('No local catalogs found, fetching from Celestrak...');
-  const totalGroups = TLE_SOURCES.length;
+  // 3. Fetch Celestrak groups (as primary if no Astria, or supplement if Astria loaded)
+  const baseResult = astriaCatalog || result;
   const seenIds = new Set();
+
+  // Index existing IDs from AstriaGraph
+  if (astriaCatalog) {
+    for (const rec of astriaCatalog.all) {
+      const id = rec.satrec?.satnum;
+      if (id) seenIds.add(id);
+    }
+    console.log(`AstriaGraph loaded ${astriaCatalog.all.length} objects, supplementing with Celestrak...`);
+  }
+
+  const totalGroups = TLE_SOURCES.length;
+  let celestrakAdded = 0;
 
   for (let i = 0; i < TLE_SOURCES.length; i++) {
     const source = TLE_SOURCES[i];
@@ -123,28 +133,37 @@ export async function fetchAllTLEs(onProgress) {
 
     let text = getCached(cacheKey);
     if (!text) {
-      text = await fetchWithFallback(source.url);
-      setCache(cacheKey, text);
+      try {
+        text = await fetchWithFallback(source.url);
+        setCache(cacheKey, text);
+      } catch (err) {
+        console.warn(`Failed to fetch ${source.label}:`, err.message);
+        if (onProgress) onProgress((i + 1) / totalGroups, 1, source.label);
+        continue;
+      }
     }
 
     const records = parseTLE(text, source.category);
 
     for (const record of records) {
       const noradId = record.satrec?.satnum;
-      if (noradId && seenIds.has(noradId)) continue;
+      if (noradId && seenIds.has(noradId)) continue; // skip if already from Astria
       if (noradId) seenIds.add(noradId);
 
-      result[source.category].push(record);
-      result.all.push(record);
+      baseResult[source.category].push(record);
+      baseResult.all.push(record);
+      celestrakAdded++;
     }
 
     if (onProgress) {
-      onProgress(i + 1, totalGroups, source.label);
+      const astriaSteps = astriaCatalog ? 1 : 0;
+      onProgress((i + 1 + astriaSteps) / (totalGroups + astriaSteps), 1, source.label);
     }
   }
 
-  console.log(`Loaded ${result.all.length} unique objects from Celestrak`);
-  return result;
+  console.log(`Total: ${baseResult.all.length} objects (Celestrak added ${celestrakAdded} new)`);
+  baseResult.source = astriaCatalog ? 'ASTRIAGRAPH + CELESTRAK' : 'CELESTRAK';
+  return baseResult;
 }
 
 // ─── Full catalog loader ────────────────────────────────────────────────────
@@ -199,7 +218,7 @@ async function tryLoadFullCatalog(onProgress) {
 }
 
 // ─── AstriaGraph catalog loader ─────────────────────────────────────────────
-// Format: array of [noradId, name, orbitType, sma(m), ecc, inc(rad), raan(rad), argp(rad), ma(rad), epoch]
+// Format: array of [noradId, name, orbitType, sma(m), ecc, inc(rad), raan(rad), argp(rad), ma(rad), epoch, country, launchDate, launchMass]
 
 async function tryLoadAstriaCatalog(onProgress) {
   try {
@@ -223,14 +242,17 @@ async function tryLoadAstriaCatalog(onProgress) {
     };
 
     for (const entry of data) {
-      const [noradId, name, orbitType, sma, ecc, inc, raan, argp, ma, epoch] = entry;
+      const [noradId, name, orbitType, sma, ecc, inc, raan, argp, ma, epoch, country, launchDate, launchMass] = entry;
 
       const category = categorizeByName(name, noradId);
 
       const record = {
         name,
         category,
-        satrec: { satnum: noradId }, // minimal satrec for tooltip compatibility
+        country: country || '',
+        launchDate: launchDate || '',
+        launchMass: launchMass || '',
+        satrec: { satnum: noradId },
         kepler: {
           sma, ecc, inc, raan, argp, ma,
           epochMs: new Date(epoch).getTime(),

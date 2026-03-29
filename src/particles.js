@@ -10,7 +10,6 @@ function createDiscTexture() {
   const ctx = canvas.getContext('2d');
   const center = size / 2;
 
-  // Radial gradient: solid center → transparent edge
   const grad = ctx.createRadialGradient(center, center, 0, center, center, center);
   grad.addColorStop(0, 'rgba(255,255,255,1)');
   grad.addColorStop(0.4, 'rgba(255,255,255,0.8)');
@@ -32,7 +31,50 @@ const OPACITY = {
   station:    1.0,
 };
 
+// Minimum pixel size so distant objects (GEO etc.) stay visible
+const MIN_PIXEL_SIZE = 1.5;
+
 const CATEGORIES = ['active', 'debris', 'rocketBody', 'station'];
+
+// Custom ShaderMaterial that attenuates point size with distance
+// but clamps to a minimum pixel size
+function createPointMaterial(color, size, opacity, discTexture) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uColor:       { value: new THREE.Color(color) },
+      uSize:        { value: size },
+      uMinSize:     { value: MIN_PIXEL_SIZE },
+      uOpacity:     { value: opacity },
+      uMap:         { value: discTexture },
+      uPixelRatio:  { value: Math.min(window.devicePixelRatio, 2) },
+    },
+    vertexShader: `
+      uniform float uSize;
+      uniform float uMinSize;
+      uniform float uPixelRatio;
+      void main() {
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        // Size attenuation: scale by inverse distance
+        float attenSize = uSize * uPixelRatio * (300.0 / -mvPosition.z);
+        // Clamp to minimum pixel size
+        gl_PointSize = max(attenSize, uMinSize * uPixelRatio);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      uniform sampler2D uMap;
+      void main() {
+        vec4 texColor = texture2D(uMap, gl_PointCoord);
+        gl_FragColor = vec4(uColor, texColor.a * uOpacity);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+}
 
 export function createParticleSystems(propagator, scene) {
   const discTexture = createDiscTexture();
@@ -45,17 +87,12 @@ export function createParticleSystems(propagator, scene) {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(buffer, 3));
 
-    const material = new THREE.PointsMaterial({
-      color: new THREE.Color(PALETTE[category]),
-      size: VISUAL_CONFIG.pointSizes[category],
-      map: discTexture,
-      transparent: true,
-      opacity: OPACITY[category],
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      sizeAttenuation: true,   // sizes are in world units, scale with distance
-      alphaTest: 0.01,
-    });
+    const material = createPointMaterial(
+      PALETTE[category],
+      VISUAL_CONFIG.pointSizes[category],
+      OPACITY[category],
+      discTexture,
+    );
 
     const points = new THREE.Points(geometry, material);
     scene.add(points);
