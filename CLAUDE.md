@@ -19,7 +19,7 @@ Browser-based 3D visualization of Earth's orbital debris field (~27,600 tracked 
 2. `public/data/astria-catalog.json` — Prebaked AstriaGraph data (~27.6k objects with Keplerian elements, included in repo). Contains intact satellites + debris from UT Austin's AstriaGraph. Fields: `[noradId, name, orbitType, sma, ecc, inc, raan, argp, ma, epoch, country, launchDate, launchMass]`
 3. Celestrak live TLE groups — fetched at runtime as fallback (~17.5k objects). Uses CORS proxy fallback chain: direct → corsproxy.io → local `/data/*.tle` files
 
-When AstriaGraph loads, Celestrak data is fetched as a supplement — new objects not in AstriaGraph are added. Deduplication by NORAD ID.
+When AstriaGraph loads, Celestrak data is fetched as a supplement — new objects not in AstriaGraph are added. Deduplication by NORAD ID. Celestrak's curated "active" group is cross-referenced to reclassify defunct AstriaGraph satellites (old COSMOS, OPS, etc.) as debris — only Celestrak-confirmed objects count as "active".
 
 ### Dual Propagation System
 - **SGP4** (satellite.js) — used for TLE-sourced objects (Celestrak, Space-Track). More accurate, includes drag model.
@@ -65,6 +65,11 @@ ECI from satellite.js/kepler.js → rotate to ECEF using GMST → map to Three.j
 **Selection panel** (bottom-right): click an object to select, shows info + Wikipedia thumbnail. Satellite name links to N2YO. Dragging camera doesn't deselect. Panel clicks don't deselect.
 
 **Category shapes**: diamond=active, cross=debris, triangle=rocketBody, ring=station. Both as 256px canvas textures on particles and SVG icons in the HUD.
+
+## Real-World Reference Numbers (early 2026)
+
+- **~13,000+ active satellites** in orbit (per CelesTrak / Dr. Jonathan McDowell). Celestrak's curated active group is the source of truth — AstriaGraph name-based categorization alone overcounts because defunct satellites without "DEB" in their name default to "active".
+- **2 operational space stations**: ISS (NORAD 25544) and China's Tiangong/TSS (core module Tianhe, NORAD 48274). Tiangong's lab modules Wentian (53239) and Mengtian (54216) are docked to Tianhe and should NOT be tracked as separate stations — only the core module is in STATION_IDS.
 
 ## Key Gotchas
 
