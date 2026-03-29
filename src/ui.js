@@ -111,6 +111,15 @@ export function createUI(state, particleSystems, controls, propagator) {
   title.style.letterSpacing = '0.15em';
   title.style.textTransform = 'uppercase';
 
+  const subtitle = document.createElement('div');
+  baseStyle(subtitle);
+  subtitle.textContent = 'Orbital debris field visualization';
+  subtitle.style.fontSize = '9px';
+  subtitle.style.fontWeight = '300';
+  subtitle.style.color = VISUAL_CONFIG.ui.colorDim;
+  subtitle.style.letterSpacing = '0.08em';
+  subtitle.style.marginTop = '2px';
+
   const collapseBtn = document.createElement('span');
   baseStyle(collapseBtn);
   collapseBtn.style.fontSize = '14px';
@@ -122,6 +131,7 @@ export function createUI(state, particleSystems, controls, propagator) {
   titleRow.appendChild(title);
   titleRow.appendChild(collapseBtn);
   hud.appendChild(titleRow);
+  hud.appendChild(subtitle);
 
   // ── Date readout (always visible) ─────────────────────────────────────────
   const dateReadout = document.createElement('div');
