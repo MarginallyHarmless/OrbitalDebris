@@ -1,4 +1,4 @@
-// ─── ORBITAL DEBRIS FIELD VISUALIZATION ─────────────────────────────────────
+// ─── CROWDED SKY ────────────────────────────────────────────────────────────
 // Entry point. Bootstraps scene, fetches data, runs animation loop.
 // ─────────────────────────────────────────────────────────────────────────────
 

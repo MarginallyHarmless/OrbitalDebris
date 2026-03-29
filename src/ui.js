@@ -103,7 +103,7 @@ export function createUI(state, particleSystems, controls, propagator) {
   titleRow.style.cursor = 'pointer';
 
   const title = document.createElement('div');
-  title.textContent = 'Orbital Debris Field';
+  title.textContent = 'Crowded Sky';
   baseStyle(title);
   title.style.fontSize = '13px';
   title.style.fontWeight = '300';
