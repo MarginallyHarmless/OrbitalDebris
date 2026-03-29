@@ -189,7 +189,7 @@ export function createUI(state, particleSystems, controls, propagator) {
   const MIN_YEAR = 1957;
   const MAX_YEAR = new Date().getFullYear();
 
-  content.appendChild(sectionLabel('Time Period'));
+  content.appendChild(sectionLabel('Year'));
 
   const yearRow = document.createElement('div');
   yearRow.style.display = 'flex';
@@ -302,6 +302,50 @@ export function createUI(state, particleSystems, controls, propagator) {
   yearRow.appendChild(yearReadout);
   yearRow.appendChild(yearResetBtn);
   content.appendChild(yearRow);
+
+  // ── Brightness slider ────────────────────────────────────────────────────
+  content.appendChild(sectionLabel('Brightness'));
+
+  const brightnessRow = document.createElement('div');
+  brightnessRow.style.display = 'flex';
+  brightnessRow.style.alignItems = 'center';
+  brightnessRow.style.gap = '10px';
+
+  const brightnessSlider = document.createElement('input');
+  brightnessSlider.type = 'range';
+  brightnessSlider.min = '10';
+  brightnessSlider.max = '200';
+  brightnessSlider.value = '100';
+
+  const brightnessReadout = document.createElement('span');
+  baseStyle(brightnessReadout);
+  brightnessReadout.style.fontWeight = '500';
+  brightnessReadout.style.minWidth = '32px';
+  brightnessReadout.textContent = '100%';
+
+  brightnessSlider.addEventListener('input', () => {
+    const val = parseInt(brightnessSlider.value, 10);
+    brightnessReadout.textContent = val + '%';
+    const scale = val / 100;
+    for (const cat of ['active', 'debris', 'rocketBody', 'station']) {
+      const sys = particleSystems[cat];
+      if (sys && sys.material && sys.material.uniforms && sys.material.uniforms.uOpacity) {
+        sys.material.uniforms.uOpacity.value = sys.material._baseOpacity * scale;
+      }
+    }
+  });
+
+  // Store base opacity values for scaling
+  for (const cat of ['active', 'debris', 'rocketBody', 'station']) {
+    const sys = particleSystems[cat];
+    if (sys && sys.material && sys.material.uniforms && sys.material.uniforms.uOpacity) {
+      sys.material._baseOpacity = sys.material.uniforms.uOpacity.value;
+    }
+  }
+
+  brightnessRow.appendChild(brightnessSlider);
+  brightnessRow.appendChild(brightnessReadout);
+  content.appendChild(brightnessRow);
 
   content.appendChild(createDivider());
 
