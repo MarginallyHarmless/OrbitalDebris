@@ -54,7 +54,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     position: 'fixed',
     pointerEvents: 'auto',
     zIndex: '1000',
-    background: 'rgba(10, 12, 20, 0.8)',
+    background: 'rgba(10, 12, 20, 0.85)',
     backdropFilter: 'blur(16px)',
     webkitBackdropFilter: 'blur(16px)',
     border: '1px solid rgba(255,255,255,0.1)',
@@ -64,12 +64,24 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     letterSpacing: '0.02em',
     color: 'rgba(255,255,255,0.7)',
     display: 'none',
-    borderRadius: isMobile ? '10px 10px 0 0' : '10px',
-    ...(isMobile
-      ? { bottom: '0', left: '0', right: '0', maxHeight: '40vh', overflowY: 'auto' }
-      : { bottom: '16px', right: '16px', minWidth: '200px', maxWidth: '280px' }
-    ),
   });
+
+  if (isMobile) {
+    panel.style.bottom = '0';
+    panel.style.left = '0';
+    panel.style.right = '0';
+    panel.style.maxHeight = '35vh';
+    panel.style.overflowY = 'auto';
+    panel.style.borderRadius = '12px 12px 0 0';
+    panel.style.borderBottom = 'none';
+  } else {
+    panel.style.bottom = '16px';
+    panel.style.right = '16px';
+    panel.style.minWidth = '200px';
+    panel.style.maxWidth = '280px';
+    panel.style.borderRadius = '10px';
+  }
+
   document.body.appendChild(panel);
 
   // Clicks/taps on panel should not deselect
