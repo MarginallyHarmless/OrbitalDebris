@@ -66,7 +66,7 @@ export const VISUAL_CONFIG = {
   },
 
   time: {
-    defaultScale: 1,
+    defaultScale: 60,
     minScale:     1,
     maxScale:     3600,
   },

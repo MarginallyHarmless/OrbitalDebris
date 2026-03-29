@@ -117,32 +117,46 @@ export function createPropagator(categorizedData) {
     keyframeTimeB = date.getTime();
   }
 
+  // Track whether interpolation actually needs to run
+  let lastT = -1;
+
   function interpolate(currentTimeMs) {
     const duration = keyframeTimeB - keyframeTimeA;
     const t = duration > 0
       ? Math.max(0, Math.min(1, (currentTimeMs - keyframeTimeA) / duration))
       : 1;
 
+    // Skip only if t is truly identical (e.g. paused)
+    if (t === lastT && yearFilter === null) return false;
+    lastT = t;
+
     for (const cat of categories) {
       const a = posBufferA[cat];
       const b = posBufferB[cat];
       const out = positionBuffers[cat];
       const mask = visibleMask[cat];
-      const len = out.length / 3;
+      const len = a.length;
 
-      for (let i = 0; i < len; i++) {
-        const o = i * 3;
-        if (mask[i]) {
-          out[o]     = a[o]     + (b[o]     - a[o])     * t;
-          out[o + 1] = a[o + 1] + (b[o + 1] - a[o + 1]) * t;
-          out[o + 2] = a[o + 2] + (b[o + 2] - a[o + 2]) * t;
-        } else {
-          out[o] = 0;
-          out[o + 1] = 0;
-          out[o + 2] = 0;
+      // Fast path: no year filter active, skip mask check
+      if (yearFilter === null) {
+        for (let i = 0; i < len; i++) {
+          out[i] = a[i] + (b[i] - a[i]) * t;
+        }
+      } else {
+        for (let i = 0, m = 0; i < len; i += 3, m++) {
+          if (mask[m]) {
+            out[i]     = a[i]     + (b[i]     - a[i])     * t;
+            out[i + 1] = a[i + 1] + (b[i + 1] - a[i + 1]) * t;
+            out[i + 2] = a[i + 2] + (b[i + 2] - a[i + 2]) * t;
+          } else {
+            out[i] = 0;
+            out[i + 1] = 0;
+            out[i + 2] = 0;
+          }
         }
       }
     }
+    return true;
   }
 
   function applyYearFilter() {

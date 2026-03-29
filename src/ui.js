@@ -123,7 +123,7 @@ export function createUI(state, particleSystems, controls, propagator) {
   playBtn.style.padding = '4px 0';
   playBtn.style.transition = 'color 0.15s';
   let playing = state.timeScale > 0;
-  const savedScale = state.timeScale || VISUAL_CONFIG.time.defaultScale;
+  let savedScale = state.timeScale || VISUAL_CONFIG.time.defaultScale;
 
   function updatePlayBtn() {
     if (playing) {
@@ -139,7 +139,6 @@ export function createUI(state, particleSystems, controls, propagator) {
   playBtn.addEventListener('click', () => {
     playing = !playing;
     state.timeScale = playing ? savedScale : 0;
-    if (controls) controls.autoRotate = playing;
     updatePlayBtn();
   });
 
@@ -183,15 +182,31 @@ export function createUI(state, particleSystems, controls, propagator) {
   let savedSimTime = null;
   let wasPlaying = false;
 
+  let propagateDebounce = null;
+
+  // Lightweight: just update filter + counts (instant)
+  function applyYearFilter(year) {
+    if (!propagator) return;
+    propagator.setYearFilter(year);
+    state.simTime = new Date(year, 6, 1);
+    updateCountsInternal(propagator.getCounts());
+  }
+
+  // Heavyweight: re-propagate all orbits (debounced)
+  function applyYearPropagate(year) {
+    if (!propagator) return;
+    state.simTime = new Date(year, 6, 1);
+    propagator.propagateAll(state.simTime);
+    if (state.resetPropTimer) state.resetPropTimer();
+  }
+
   function applyYear(year) {
-    if (propagator) {
-      propagator.setYearFilter(year);
-      state.simTime = new Date(year, 6, 1);
-      propagator.propagateAll(state.simTime);
-      if (state.resetPropTimer) state.resetPropTimer();
-      const fc = propagator.getCounts();
-      updateCountsInternal(fc);
-    }
+    // Instant: update visibility mask and counts
+    applyYearFilter(year);
+
+    // Debounced: re-propagate after user stops dragging (200ms)
+    clearTimeout(propagateDebounce);
+    propagateDebounce = setTimeout(() => applyYearPropagate(year), 200);
   }
 
   yearSlider.addEventListener('input', () => {
@@ -199,6 +214,7 @@ export function createUI(state, particleSystems, controls, propagator) {
 
     // If slider reaches max, auto-reset (same as clicking ✕)
     if (year >= MAX_YEAR) {
+      clearTimeout(propagateDebounce);
       yearResetBtn.click();
       return;
     }

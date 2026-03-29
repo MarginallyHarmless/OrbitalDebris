@@ -94,42 +94,48 @@ async function boot() {
   // ─── ANIMATION LOOP ────────────────────────────────────────────────────
 
   const clock = { last: performance.now() };
-  const PROP_INTERVAL_MS = 2000; // real-time ms between keyframe computations
-  let nextPropAt = performance.now() + PROP_INTERVAL_MS;
+  // Max sim-time gap between keyframes: 60 seconds
+  // At higher speeds we propagate more often in real time to keep orbits smooth
+  const MAX_SIM_GAP_MS = 60 * 1000; // 60 seconds of sim time between keyframes
+  const MIN_PROP_INTERVAL = 100;     // never propagate faster than 10x/sec real time
 
-  // Expose a way to reset the propagation timer (called after year slider reset)
+  function getPropInterval() {
+    if (state.timeScale <= 0) return 2000;
+    // How many real ms until we'd accumulate MAX_SIM_GAP_MS of sim time?
+    const interval = MAX_SIM_GAP_MS / state.timeScale;
+    return Math.max(MIN_PROP_INTERVAL, Math.min(2000, interval));
+  }
+
+  let nextPropAt = performance.now() + getPropInterval();
+
   state.resetPropTimer = () => {
-    nextPropAt = performance.now() + PROP_INTERVAL_MS;
+    nextPropAt = performance.now() + getPropInterval();
   };
 
-  // Pre-compute the first future keyframe so we have A=now, B=future
-  const simIntervalMs = PROP_INTERVAL_MS * state.timeScale; // sim-time gap per interval
+  // Pre-compute the first future keyframe
   propagator.propagateNext(
-    new Date(state.simTime.getTime() + PROP_INTERVAL_MS * state.timeScale)
+    new Date(state.simTime.getTime() + MAX_SIM_GAP_MS)
   );
 
   function animate() {
     requestAnimationFrame(animate);
 
     const now = performance.now();
-    const dtReal = (now - clock.last) / 1000; // seconds
+    const dtReal = (now - clock.last) / 1000;
     clock.last = now;
 
-    // Cap dt to avoid huge jumps on tab-switch
     const dt = Math.min(dtReal, 0.1);
 
-    // Advance simulation time
     state.simTime = new Date(state.simTime.getTime() + dt * state.timeScale * 1000);
 
-    // Update controls
     controls.update();
 
-    // When we reach the next keyframe time, swap and compute a new future keyframe
+    const propInterval = getPropInterval();
     if (now >= nextPropAt) {
-      nextPropAt = now + PROP_INTERVAL_MS;
-      // B becomes the new future: current sim time + one interval ahead
+      nextPropAt = now + propInterval;
+      // Future keyframe is always MAX_SIM_GAP_MS ahead in sim time
       const futureSimTime = new Date(
-        state.simTime.getTime() + PROP_INTERVAL_MS * state.timeScale
+        state.simTime.getTime() + MAX_SIM_GAP_MS
       );
       propagator.propagateNext(futureSimTime);
 
@@ -143,9 +149,11 @@ async function boot() {
     // Earth rotation disabled — at 1x speed it's imperceptible and
     // any visible spin would be out of sync with orbital object movement
 
-    // Interpolate positions every frame for smooth motion
-    propagator.interpolate(state.simTime.getTime());
-    updateParticlePositions(particleSystems, propagator);
+    // Interpolate positions — skip GPU upload if nothing changed
+    const didUpdate = propagator.interpolate(state.simTime.getTime());
+    if (didUpdate) {
+      updateParticlePositions(particleSystems, propagator);
+    }
 
     // Update time display every frame for smooth readout
     ui.updateTime(state.simTime);
