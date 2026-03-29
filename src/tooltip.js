@@ -47,13 +47,15 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   });
   document.body.appendChild(tooltip);
 
-  // ── Selection panel (fixed position, stays open) ────────────────────────
+  // ── Selection panel (absolute, top-right, mirrors the HUD positioning) ──
   const isMobile = window.innerWidth < 768;
   const panel = document.createElement('div');
   Object.assign(panel.style, {
-    position: 'fixed',
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
     pointerEvents: 'auto',
-    zIndex: '1000',
+    zIndex: '10',
     background: 'rgba(10, 12, 20, 0.85)',
     backdropFilter: 'blur(16px)',
     webkitBackdropFilter: 'blur(16px)',
@@ -64,24 +66,12 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     letterSpacing: '0.02em',
     color: 'rgba(255,255,255,0.7)',
     display: 'none',
+    borderRadius: '10px',
+    maxWidth: isMobile ? '55vw' : '280px',
+    minWidth: isMobile ? '0' : '200px',
+    maxHeight: '80vh',
+    overflowY: 'auto',
   });
-
-  if (isMobile) {
-    panel.style.bottom = '0';
-    panel.style.left = '0';
-    panel.style.right = '0';
-    panel.style.maxHeight = '35vh';
-    panel.style.overflowY = 'auto';
-    panel.style.borderRadius = '12px 12px 0 0';
-    panel.style.borderBottom = 'none';
-  } else {
-    panel.style.bottom = '16px';
-    panel.style.right = '16px';
-    panel.style.minWidth = '200px';
-    panel.style.maxWidth = '280px';
-    panel.style.borderRadius = '10px';
-  }
-
   document.body.appendChild(panel);
 
   // Clicks/taps on panel should not deselect
