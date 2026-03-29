@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Browser-based 3D visualization of Earth's orbital debris field (~27,000 tracked objects) using real TLE data from Celestrak. Built with Vite + vanilla JS (no framework), Three.js for rendering, and satellite.js for SGP4 orbit propagation.
+Browser-based 3D visualization of Earth's orbital debris field (~27,600 tracked objects) using Three.js for rendering, satellite.js for SGP4 orbit propagation, and a Keplerian propagator for AstriaGraph data. Built with Vite + vanilla JS (no framework).
 
 ## Commands
 
@@ -14,32 +14,62 @@ Browser-based 3D visualization of Earth's orbital debris field (~27,000 tracked 
 
 ## Architecture
 
-**Single aesthetic control surface:** All visual parameters live in `src/config.js` (`VISUAL_CONFIG` and `PALETTE`). Every module imports from this. To change the look, edit only this file.
+### Data Sources (priority order)
+1. `public/data/full-catalog.tle` — Space-Track.org full TLE dump (~33k objects, user must download with their account)
+2. `public/data/astria-catalog.json` — Prebaked AstriaGraph data (~27.6k objects with Keplerian elements, included in repo). Contains intact satellites + debris from UT Austin's AstriaGraph. Fields: `[noradId, name, orbitType, sma, ecc, inc, raan, argp, ma, epoch, country, launchDate, launchMass]`
+3. Celestrak live TLE groups — fetched at runtime as fallback (~17.5k objects). Uses CORS proxy fallback chain: direct → corsproxy.io → local `/data/*.tle` files
 
-**Data flow:** `data.js` fetches TLE text from Celestrak (5 groups) → `utils.js:parseTLE()` converts to satrec objects → `propagator.js` runs SGP4 on all satellites and fills `Float32Array` position buffers → `particles.js` binds those buffers directly to `THREE.BufferGeometry` attributes → Three.js renders 4 `Points` draw calls (one per category).
+When AstriaGraph loads, Celestrak data is fetched as a supplement — new objects not in AstriaGraph are added. Deduplication by NORAD ID.
 
-**Module responsibilities:**
-- `main.js` — boot sequence orchestrator and animation loop
-- `config.js` — VISUAL_CONFIG/PALETTE constants (the iteration surface)
-- `scene.js` — Three.js scene, camera, renderer, OrbitControls, starfield
-- `earth.js` — Earth sphere with Fresnel atmosphere shader
-- `data.js` — Celestrak fetch with 3-tier fallback (direct → CORS proxy → local /data/)
-- `propagator.js` — SGP4 batch propagation, ECI→ECEF→scene coordinate transform
-- `particles.js` — 4x THREE.Points with additive blending and disc sprites
-- `ui.js` — DOM HUD (time slider, category toggles, counts)
-- `kessler.js` — altitude-band density torus rings, toggled with K key
+### Dual Propagation System
+- **SGP4** (satellite.js) — used for TLE-sourced objects (Celestrak, Space-Track). More accurate, includes drag model.
+- **Keplerian** (`kepler.js`) — two-body propagation for AstriaGraph objects. Solves Kepler's equation via Newton-Raphson, converts orbital elements to ECI positions. Less accurate (no perturbations) but works with the SMA/Ecc/Inc/RAAN/ArgP/MeanAnom format.
+
+The propagator (`propagator.js`) transparently handles both: checks for `sat.kepler` vs `sat.satrec` on each object.
+
+### Animation & Interpolation
+- Two keyframe buffers (A and B) per category. `propagateAll` fills both; `propagateNext` swaps A←B and computes new B.
+- `interpolate()` lerps between A and B every frame for smooth motion.
+- Keyframes are always 60 sim-seconds apart. At higher speeds, propagation runs more frequently in real time (adaptive interval, min 100ms).
+- Simulation speed fixed at 60x (1 min/sec). At this speed a LEO orbit completes in ~90 seconds.
+
+### Year Filter System
+- Each satellite stores a `launchYear` (from AstriaGraph's launchDate field, gaps filled from Celestrak satcat).
+- `setYearFilter(year)` updates a `visibleMask` (Uint8Array per category). `interpolate()` zeros positions for masked objects.
+- When filter active: objects without launch date are hidden (~510 objects, 1.8%).
+- When slider reaches max year, auto-resets to show all.
+- Year slider is debounced: filter+counts update instantly, full propagation runs 200ms after user stops dragging.
+
+### Module Responsibilities
+- `main.js` — boot sequence, animation loop, wires everything together
+- `config.js` — VISUAL_CONFIG + PALETTE constants (aesthetic control surface)
+- `scene.js` — Three.js scene, camera, renderer, OrbitControls, starfield, lighting
+- `earth.js` — Earth sphere with Blue Marble texture (async load) + Fresnel atmosphere shader
+- `data.js` — data loading with priority chain, TLE parsing, AstriaGraph JSON parsing, categorization by name (DEB→debris, R/B→rocketBody, station IDs→station)
+- `propagator.js` — SGP4 + Keplerian propagation, keyframe interpolation, year filter mask, position/altitude buffers
+- `kepler.js` — two-body Keplerian propagator (solveKepler, keplerToEci, altFromEci)
+- `particles.js` — 4x THREE.Points with custom ShaderMaterial (min-size clamping), category-specific shape textures (diamond/cross/triangle/ring at 256px)
+- `ui.js` — glassmorphism HUD card: play/pause, year slider, category toggles with SVG shape icons, counts, data source links, Kessler hint
+- `kessler.js` — altitude-band density torus rings (200-2000km, 50km bands), glass legend panel with explanation text, toggled with K key
+- `tooltip.js` — raycaster hover tooltips, click-to-select with 3D ring, info panel with Wikipedia image lookup, drag detection, N2YO satellite link
 - `loader.js` — loading screen progress bar
-- `tooltip.js` — raycaster hover tooltips
-- `utils.js` — coordinate transforms, TLE parsing
+- `utils.js` — coordinate transforms (ECI→ECEF→scene), TLE parsing
 
-**Coordinate system:** Satellites come as ECI (Earth-Centered Inertial) from satellite.js. `eciToScene()` rotates to ECEF using GMST, then maps to Three.js coordinates (ECI-Z → scene-Y, ECI-Y → scene-Z). Earth stays static; objects orbit.
+### Coordinate System
+ECI from satellite.js/kepler.js → rotate to ECEF using GMST → map to Three.js (ECI-Z → scene-Y, ECI-Y → scene-Z). Earth is static; objects orbit around it.
 
-**Performance:** Propagation runs every 120 frames (~2s at 60fps), not every frame. Batch mode (`propagateBatch`) processes 5000 satellites per frame in round-robin for smoother frame times.
+## UI Design
 
-## Key Design Constraints
+**Glassmorphism aesthetic**: frosted glass panels with `backdrop-filter: blur`, rounded corners (8-10px), subtle `rgba(255,255,255,0.08)` borders. Font: Satoshi (Fontshare CDN). Normal case text, white at varying opacities for hierarchy. Cyan accent (`#00e5ff`) only for interactive elements.
 
-- Aesthetic: "deep space / cold precision / quiet dread" — dark, eerie, no bloom/glow effects
-- All UI text: Space Mono, uppercase, letter-spacing 0.15em, cyan (rgba(0,229,255,0.6))
-- No rounded corners on any UI element
-- Additive blending on all particles for density glow
-- Local TLE fallback: users can drop `.tle` files in `public/data/` if Celestrak is unreachable
+**Selection panel** (bottom-right): click an object to select, shows info + Wikipedia thumbnail. Satellite name links to N2YO. Dragging camera doesn't deselect. Panel clicks don't deselect.
+
+**Category shapes**: diamond=active, cross=debris, triangle=rocketBody, ring=station. Both as 256px canvas textures on particles and SVG icons in the HUD.
+
+## Key Gotchas
+
+- AstriaGraph epochs are from 2023-2024. Propagating far from epoch (especially backwards) loses accuracy.
+- Celestrak `rocket-body` group doesn't exist — rocket bodies come from AstriaGraph name categorization ("R/B" in name).
+- The year slider debounces propagation (200ms) but updates visibility mask instantly for responsive feel.
+- `propagateAll` must be followed by `state.resetPropTimer()` to prevent the animation loop from immediately overwriting fresh keyframes.
+- Wikipedia image lookup uses name mappings (ISS→"International Space Station", STARLINK→"Starlink", etc.) with search API fallback. Debris/rocket bodies are skipped.
