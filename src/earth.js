@@ -3,93 +3,203 @@ import { VISUAL_CONFIG } from './config.js';
 
 export function createEarth(scene) {
   const textureLoader = new THREE.TextureLoader();
+  const BASE = import.meta.env.BASE_URL || '/';
 
-  // 1. Earth sphere — start dark, texture loads async
+  // ── Earth sphere with custom day/night shader ─────────────────────────────
   const earthGeometry = new THREE.SphereGeometry(
     VISUAL_CONFIG.earth.radius,
     VISUAL_CONFIG.earth.segments,
-    VISUAL_CONFIG.earth.segments
+    VISUAL_CONFIG.earth.segments,
   );
 
-  const earthMaterial = new THREE.MeshPhongMaterial({
-    color: '#8aacc8',            // brighter tint — lets more texture through
-    emissive: '#0a1520',
-    emissiveIntensity: 0.5,
-    shininess: 10,
-    specular: '#334455',
+  const earthUniforms = {
+    uDayMap:        { value: null },
+    uNightMap:      { value: null },
+    uSunDirection:  { value: new THREE.Vector3(5, 3, 5).normalize() },
+  };
+
+  const earthMaterial = new THREE.ShaderMaterial({
+    uniforms: earthUniforms,
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        vNormal = normalize(normalMatrix * normal);
+        vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D uDayMap;
+      uniform sampler2D uNightMap;
+      uniform vec3 uSunDirection;
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      varying vec2 vUv;
+
+      void main() {
+        vec3 normal = normalize(vNormal);
+        vec3 sunDir = normalize(uSunDirection);
+
+        // Sun-facing factor: 1 = fully lit, 0 = terminator, -1 = fully dark
+        float NdotL = dot(normal, sunDir);
+
+        // Day/night blend with soft terminator band
+        float dayFactor = smoothstep(-0.15, 0.25, NdotL);
+
+        // Sample textures
+        vec3 dayColor = texture2D(uDayMap, vUv).rgb;
+        vec3 nightColor = texture2D(uNightMap, vUv).rgb;
+
+        // Night lights: boost city lights visibility
+        nightColor *= 1.8;
+
+        // Blend day and night
+        vec3 color = mix(nightColor, dayColor, dayFactor);
+
+        // Specular ocean glint — oceans are dark in Blue Marble (luminance < 0.25)
+        float luminance = dot(dayColor, vec3(0.299, 0.587, 0.114));
+        float isOcean = 1.0 - smoothstep(0.08, 0.25, luminance);
+        vec3 viewDir = normalize(cameraPosition - vPosition);
+        vec3 halfDir = normalize(sunDir + viewDir);
+        float spec = pow(max(dot(normal, halfDir), 0.0), 120.0);
+        color += vec3(0.95, 0.9, 0.8) * spec * isOcean * dayFactor * 0.8;
+
+        // Warm terminator glow — atmospheric scattering at the day/night boundary
+        float terminatorGlow = exp(-pow((NdotL - 0.0) / 0.12, 2.0));
+        color += vec3(0.8, 0.3, 0.1) * terminatorGlow * 0.15;
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
   });
 
   const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
   scene.add(earthMesh);
 
-  // Load Blue Marble texture — darkened via material color tint
-  const BASE = import.meta.env.BASE_URL || '/';
+  // Load textures
   textureLoader.load(`${BASE}textures/earth-blue-marble.jpg`, (texture) => {
     texture.colorSpace = THREE.SRGBColorSpace;
-    earthMaterial.map = texture;
-    earthMaterial.needsUpdate = true;
+    earthUniforms.uDayMap.value = texture;
   });
 
-  // 2. Subtle wireframe grid lines
+  textureLoader.load(`${BASE}textures/earth-night.jpg`, (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    earthUniforms.uNightMap.value = texture;
+  });
+
+  // Placeholder textures while loading (dark blue for day, black for night)
+  const placeholderDay = new THREE.DataTexture(
+    new Uint8Array([10, 21, 32, 255]), 1, 1, THREE.RGBAFormat
+  );
+  placeholderDay.needsUpdate = true;
+  earthUniforms.uDayMap.value = placeholderDay;
+
+  const placeholderNight = new THREE.DataTexture(
+    new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat
+  );
+  placeholderNight.needsUpdate = true;
+  earthUniforms.uNightMap.value = placeholderNight;
+
+  // ── Wireframe grid ────────────────────────────────────────────────────────
   const gridGeometry = new THREE.SphereGeometry(
     VISUAL_CONFIG.earth.radius * 1.005,
     24,
-    24
+    24,
   );
   const gridMaterial = new THREE.MeshBasicMaterial({
     wireframe: true,
     color: VISUAL_CONFIG.palette.grid,
     transparent: true,
     opacity: VISUAL_CONFIG.grid.opacity,
-    depthWrite: false
+    depthWrite: false,
   });
   const gridMesh = new THREE.Mesh(gridGeometry, gridMaterial);
   scene.add(gridMesh);
 
-  // 3. Atmosphere glow with Fresnel-based rim effect
-  const atmosphereGeometry = new THREE.SphereGeometry(
-    VISUAL_CONFIG.atmosphere.radius,
-    64,
-    64
-  );
-
-  const vertexShader = `
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    void main() {
-      vNormal = normalize(normalMatrix * normal);
-      vec4 worldPos = modelMatrix * vec4(position, 1.0);
-      vViewDir = normalize(cameraPosition - worldPos.xyz);
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `;
-
-  const fragmentShader = `
-    uniform vec3 glowColor;
-    uniform float opacity;
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    void main() {
-      float intensity = pow(1.0 - abs(dot(vViewDir, vNormal)), 3.0);
-      gl_FragColor = vec4(glowColor, intensity * opacity);
-    }
-  `;
+  // ── Two-tone atmosphere ───────────────────────────────────────────────────
+  const atmCfg = VISUAL_CONFIG.atmosphere;
+  const atmosphereGeometry = new THREE.SphereGeometry(atmCfg.radius, 64, 64);
 
   const atmosphereMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      glowColor: { value: new THREE.Color(VISUAL_CONFIG.atmosphere.color) },
-      opacity: { value: VISUAL_CONFIG.atmosphere.opacity }
+      uSunDirection: { value: new THREE.Vector3(5, 3, 5).normalize() },
+      uDayColor:     { value: new THREE.Color(atmCfg.color) },
+      uSunsetColor:  { value: new THREE.Color(atmCfg.sunsetColor) },
+      uOpacity:      { value: atmCfg.opacity },
     },
-    vertexShader,
-    fragmentShader,
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+      varying vec3 vWorldNormal;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vViewDir = normalize(cameraPosition - worldPos.xyz);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uSunDirection;
+      uniform vec3 uDayColor;
+      uniform vec3 uSunsetColor;
+      uniform float uOpacity;
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+      varying vec3 vWorldNormal;
+      void main() {
+        float rim = pow(1.0 - abs(dot(vViewDir, vNormal)), 3.0);
+
+        // Sun-facing factor for atmosphere color
+        float NdotL = dot(normalize(vWorldNormal), normalize(uSunDirection));
+
+        // Terminator zone gets warm sunset color
+        float sunsetFactor = exp(-pow((NdotL - 0.0) / 0.3, 2.0));
+        // Day side gets blue
+        float dayFactor = smoothstep(-0.1, 0.5, NdotL);
+
+        vec3 atmColor = mix(uDayColor * 0.3, uDayColor, dayFactor);
+        atmColor = mix(atmColor, uSunsetColor, sunsetFactor * 0.6);
+
+        gl_FragColor = vec4(atmColor, rim * uOpacity);
+      }
+    `,
     side: THREE.BackSide,
     transparent: true,
     blending: THREE.AdditiveBlending,
-    depthWrite: false
+    depthWrite: false,
   });
 
   const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
   scene.add(atmosphereMesh);
 
-  return { earthMesh, gridMesh, atmosphereMesh };
+  // ── Cloud layer ───────────────────────────────────────────────────────────
+  const cloudCfg = VISUAL_CONFIG.clouds;
+  const cloudGeometry = new THREE.SphereGeometry(
+    VISUAL_CONFIG.earth.radius * cloudCfg.radius,
+    64,
+    64,
+  );
+
+  const cloudMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: cloudCfg.opacity,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    color: '#ffffff',
+  });
+
+  const cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+  scene.add(cloudMesh);
+
+  textureLoader.load(`${BASE}textures/earth-clouds.jpg`, (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    cloudMaterial.map = texture;
+    cloudMaterial.needsUpdate = true;
+  });
+
+  return { earthMesh, gridMesh, atmosphereMesh, cloudMesh, earthUniforms, atmosphereMaterial };
 }

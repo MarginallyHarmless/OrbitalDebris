@@ -2,6 +2,7 @@
 // Entry point. Bootstraps scene, fetches data, runs animation loop.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import * as THREE from 'three';
 import { VISUAL_CONFIG } from './config.js';
 import { createScene } from './scene.js';
 import { createEarth } from './earth.js';
@@ -31,7 +32,7 @@ async function boot() {
   const { scene, camera, renderer, controls, composer, sunLight, filmGrainPass } = createScene();
 
   // 2. Create Earth + atmosphere
-  const { earthMesh, gridMesh } = createEarth(scene);
+  const { earthMesh, gridMesh, atmosphereMesh, cloudMesh, earthUniforms, atmosphereMaterial } = createEarth(scene);
 
   // 3. Fetch TLE data with progress
   updateProgress(0, 'CONNECTING TO CELESTRAK...');
@@ -127,6 +128,20 @@ async function boot() {
     const dt = Math.min(dtReal, 0.1);
 
     state.simTime = new Date(state.simTime.getTime() + dt * state.timeScale * 1000);
+
+    // Rotate sun direction slowly
+    const sunAngle = performance.now() * 0.0001 * VISUAL_CONFIG.sun.rotationSpeed;
+    const sunDir = new THREE.Vector3(
+      Math.cos(sunAngle) * 5,
+      3,
+      Math.sin(sunAngle) * 5,
+    ).normalize();
+    sunLight.position.copy(sunDir.clone().multiplyScalar(10));
+    earthUniforms.uSunDirection.value.copy(sunDir);
+    atmosphereMaterial.uniforms.uSunDirection.value.copy(sunDir);
+
+    // Rotate clouds independently
+    cloudMesh.rotation.y += dt * VISUAL_CONFIG.clouds.rotationSpeed;
 
     controls.update();
 
