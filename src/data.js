@@ -129,6 +129,10 @@ export async function fetchAllTLEs(onProgress) {
   const totalGroups = TLE_SOURCES.length;
   let celestrakAdded = 0;
 
+  // Collect NORAD IDs from Celestrak's curated "active" group
+  const celestrakActiveIds = new Set();
+  let celestrakActiveLoaded = false;
+
   for (let i = 0; i < TLE_SOURCES.length; i++) {
     const source = TLE_SOURCES[i];
     const cacheKey = getCacheKey(source);
@@ -146,6 +150,15 @@ export async function fetchAllTLEs(onProgress) {
     }
 
     const records = parseTLE(text, source.category);
+    const isActiveGroup = source.url.includes('GROUP=active');
+
+    if (isActiveGroup) {
+      celestrakActiveLoaded = true;
+      for (const record of records) {
+        const noradId = record.satrec?.satnum;
+        if (noradId) celestrakActiveIds.add(noradId);
+      }
+    }
 
     for (const record of records) {
       const noradId = record.satrec?.satnum;
@@ -165,6 +178,24 @@ export async function fetchAllTLEs(onProgress) {
       const astriaSteps = astriaCatalog ? 1 : 0;
       onProgress((i + 1 + astriaSteps) / (totalGroups + astriaSteps), 1, source.label);
     }
+  }
+
+  // Cross-reference: reclassify AstriaGraph "active" objects not confirmed by Celestrak
+  if (astriaCatalog && celestrakActiveLoaded && celestrakActiveIds.size > 0) {
+    let reclassified = 0;
+    const confirmed = [];
+    for (const record of baseResult.active) {
+      const noradId = record.satrec?.satnum;
+      if (noradId && !celestrakActiveIds.has(noradId)) {
+        record.category = 'debris';
+        baseResult.debris.push(record);
+        reclassified++;
+      } else {
+        confirmed.push(record);
+      }
+    }
+    baseResult.active = confirmed;
+    console.log(`Cross-reference: reclassified ${reclassified} defunct satellites from active → debris`);
   }
 
   console.log(`Total: ${baseResult.all.length} objects (Celestrak added ${celestrakAdded} new)`);
