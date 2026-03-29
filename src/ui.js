@@ -122,7 +122,7 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   const yearLabel = document.createElement('div');
   baseStyle(yearLabel);
-  yearLabel.textContent = 'LAUNCH YEAR';
+  yearLabel.textContent = 'TIME PERIOD';
   hud.appendChild(yearLabel);
 
   const yearRow = document.createElement('div');
@@ -150,10 +150,19 @@ export function createUI(state, particleSystems, controls, propagator) {
   yearResetBtn.style.fontSize = '9px';
 
   let yearActive = false;
+  let savedSimTime = null; // real time before year slider was engaged
+  let wasPlaying = false;
 
   function applyYear(year) {
     if (propagator) {
       propagator.setYearFilter(year);
+
+      // Set simulation time to July 1st of the selected year
+      state.simTime = new Date(year, 6, 1);
+
+      // Force a full re-propagation at the new time
+      propagator.propagateAll(state.simTime);
+
       const fc = propagator.getCounts();
       updateCountsInternal(fc);
     }
@@ -163,7 +172,19 @@ export function createUI(state, particleSystems, controls, propagator) {
     const year = parseInt(yearSlider.value, 10);
     yearReadout.textContent = String(year);
     yearResetBtn.style.opacity = '0.8';
-    yearActive = true;
+
+    if (!yearActive) {
+      // First activation — save current state and pause
+      yearActive = true;
+      savedSimTime = new Date(state.simTime.getTime());
+      wasPlaying = playing;
+      if (playing) {
+        playing = false;
+        state.timeScale = 0;
+        updatePlayBtn();
+      }
+    }
+
     applyYear(year);
   });
 
@@ -172,11 +193,25 @@ export function createUI(state, particleSystems, controls, propagator) {
     yearReadout.textContent = 'ALL';
     yearResetBtn.style.opacity = '0.3';
     yearActive = false;
+
     if (propagator) {
       propagator.setYearFilter(null);
+
+      // Restore real time
+      state.simTime = savedSimTime || new Date();
+      propagator.propagateAll(state.simTime);
+
       const fc = propagator.getCounts();
       updateCountsInternal(fc);
     }
+
+    // Restore play state
+    if (wasPlaying) {
+      playing = true;
+      state.timeScale = savedScale;
+      updatePlayBtn();
+    }
+    savedSimTime = null;
   });
 
   yearRow.appendChild(yearSlider);
