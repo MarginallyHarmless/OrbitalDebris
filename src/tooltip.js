@@ -394,8 +394,6 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
     closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
     closeBtn.addEventListener('touchend', (e) => { e.stopPropagation(); e.preventDefault(); closePanel(); });
     panel.appendChild(closeBtn);
-    panel.style.position = 'fixed';
-    panel.style.paddingRight = '36px';
 
     // Reset and prepend image element
     panelImage.style.display = 'none';
