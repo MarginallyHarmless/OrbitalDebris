@@ -47,33 +47,9 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
   });
   document.body.appendChild(tooltip);
 
-  // ── Selection panel ────────────────────────────────────────────────────
+  // ── Selection panel (defined in index.html CSS, just grab it) ──────────
   const isMobile = window.innerWidth < 768;
-  const panel = document.createElement('div');
-  Object.assign(panel.style, {
-    position: 'absolute',
-    pointerEvents: 'auto',
-    zIndex: '10',
-    background: 'rgba(10, 12, 20, 0.85)',
-    backdropFilter: 'blur(16px)',
-    webkitBackdropFilter: 'blur(16px)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    padding: '14px 18px',
-    fontFamily: "'Satoshi', sans-serif",
-    fontSize: '11px',
-    letterSpacing: '0.02em',
-    color: 'rgba(255,255,255,0.7)',
-    display: 'none',
-    borderRadius: '10px',
-    overflowY: 'auto',
-    // Same left positioning as HUD, placed at bottom
-    left: '16px',
-    bottom: '16px',
-    maxWidth: isMobile ? 'calc(100vw - 32px)' : '280px',
-    minWidth: isMobile ? '0' : '200px',
-    maxHeight: isMobile ? '35vh' : '50vh',
-  });
-  document.body.appendChild(panel);
+  const panel = document.getElementById('selection-panel');
 
   // Clicks/taps on panel should not deselect
   panel.addEventListener('click', (e) => e.stopPropagation());
@@ -518,7 +494,7 @@ export function createTooltip(camera, scene, particleSystems, allSatData) {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('click', onClick);
       if (tooltip.parentNode) tooltip.parentNode.removeChild(tooltip);
-      if (panel.parentNode) panel.parentNode.removeChild(panel);
+      panel.style.display = 'none';
       scene.remove(selectionRing);
     },
   };
