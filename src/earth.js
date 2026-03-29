@@ -23,7 +23,8 @@ export function createEarth(scene) {
   scene.add(earthMesh);
 
   // Load Blue Marble texture — darkened via material color tint
-  textureLoader.load('/textures/earth-blue-marble.jpg', (texture) => {
+  const BASE = import.meta.env.BASE_URL || '/';
+  textureLoader.load(`${BASE}textures/earth-blue-marble.jpg`, (texture) => {
     texture.colorSpace = THREE.SRGBColorSpace;
     earthMaterial.map = texture;
     earthMaterial.needsUpdate = true;

@@ -1,5 +1,7 @@
 import { parseTLE } from './utils.js';
 
+const BASE = import.meta.env.BASE_URL || '/';
+
 // ─── STATION NORAD IDs ─────────────────────────────────────────────────────
 // Known space stations — always categorized as 'station' regardless of source
 const STATION_IDS = new Set([
@@ -58,7 +60,7 @@ async function fetchWithFallback(url) {
       console.warn('CORS proxy also failed:', proxyErr.message);
       const filename = url.split('GROUP=')[1]?.split('&')[0] || 'unknown';
       console.warn(`Attempting local fallback: /data/${filename}.tle`);
-      const localRes = await fetch(`/data/${filename}.tle`);
+      const localRes = await fetch(`${BASE}data/${filename}.tle`);
       if (!localRes.ok) throw new Error(`Local fallback also failed for ${filename}`);
       return await localRes.text();
     }
@@ -172,7 +174,7 @@ async function tryLoadFullCatalog(onProgress) {
   try {
     if (onProgress) onProgress(0, 1, 'CHECKING LOCAL CATALOG...');
 
-    const res = await fetch('/data/full-catalog.tle');
+    const res = await fetch(`${BASE}data/full-catalog.tle`);
     if (!res.ok) return null;
 
     const text = await res.text();
@@ -224,7 +226,7 @@ async function tryLoadAstriaCatalog(onProgress) {
   try {
     if (onProgress) onProgress(0, 1, 'CHECKING ASTRIA CATALOG...');
 
-    const res = await fetch('/data/astria-catalog.json');
+    const res = await fetch(`${BASE}data/astria-catalog.json`);
     if (!res.ok) return null;
 
     const data = await res.json();
