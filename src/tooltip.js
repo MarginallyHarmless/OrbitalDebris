@@ -4,7 +4,7 @@ import { VISUAL_CONFIG, PALETTE } from './config.js';
 export function createTooltip(camera, scene, particleSystems, allSatData) {
   const isMobile = window.innerWidth < 768;
   const raycaster = new THREE.Raycaster();
-  raycaster.params.Points.threshold = isMobile ? 0.06 : 0.02;
+  raycaster.params.Points.threshold = isMobile ? 0.15 : 0.02;
 
   const mouse = new THREE.Vector2();
   const categories = ['active', 'debris', 'rocketBody', 'station'];
