@@ -381,9 +381,42 @@ export function createUI(state, particleSystems, controls, propagator) {
     }
   }
 
-  content.appendChild(sectionLabel('Country'));
+  // Country header — clickable to expand/collapse
+  const countryHeader = sectionLabel('Country');
+  countryHeader.style.cursor = 'pointer';
+  countryHeader.style.display = 'flex';
+  countryHeader.style.alignItems = 'center';
+  countryHeader.style.justifyContent = 'space-between';
 
-  const countryActiveSet = new Set(); // which country groups are toggled ON
+  const countryArrow = document.createElement('span');
+  countryArrow.textContent = '▸';
+  countryArrow.style.transition = 'transform 0.2s';
+  countryArrow.style.fontSize = '10px';
+  countryHeader.appendChild(countryArrow);
+  content.appendChild(countryHeader);
+
+  const countryContainer = document.createElement('div');
+  countryContainer.style.overflow = 'hidden';
+  countryContainer.style.maxHeight = '0';
+  countryContainer.style.opacity = '0';
+  countryContainer.style.transition = 'max-height 0.3s ease, opacity 0.2s ease';
+  content.appendChild(countryContainer);
+
+  let countryExpanded = false;
+  countryHeader.addEventListener('click', () => {
+    countryExpanded = !countryExpanded;
+    if (countryExpanded) {
+      countryContainer.style.maxHeight = '500px';
+      countryContainer.style.opacity = '1';
+      countryArrow.style.transform = 'rotate(90deg)';
+    } else {
+      countryContainer.style.maxHeight = '0';
+      countryContainer.style.opacity = '0';
+      countryArrow.style.transform = 'rotate(0deg)';
+    }
+  });
+
+  const countryActiveSet = new Set();
   function applyCountryFilter() {
     if (!propagator) return;
 
@@ -424,7 +457,7 @@ export function createUI(state, particleSystems, controls, propagator) {
 
     row.appendChild(check);
     row.appendChild(lbl);
-    content.appendChild(row);
+    countryContainer.appendChild(row);
     countryRows.push({ row, check, code: opt.code });
 
     let on = false;
