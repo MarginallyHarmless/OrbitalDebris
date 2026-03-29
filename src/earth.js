@@ -13,9 +13,11 @@ export function createEarth(scene) {
   );
 
   const earthUniforms = {
-    uDayMap:        { value: null },
-    uNightMap:      { value: null },
-    uSunDirection:  { value: new THREE.Vector3(5, 3, 5).normalize() },
+    uDayMap:          { value: null },
+    uNightMap:        { value: null },
+    uNormalMap:       { value: null },
+    uNormalStrength:  { value: VISUAL_CONFIG.earth.normalMapStrength },
+    uSunDirection:    { value: new THREE.Vector3(5, 3, 5).normalize() },
   };
 
   const earthMaterial = new THREE.ShaderMaterial({
@@ -35,6 +37,8 @@ export function createEarth(scene) {
     fragmentShader: `
       uniform sampler2D uDayMap;
       uniform sampler2D uNightMap;
+      uniform sampler2D uNormalMap;
+      uniform float uNormalStrength;
       uniform vec3 uSunDirection;
       varying vec3 vNormal;
       varying vec3 vPosition;
@@ -44,8 +48,29 @@ export function createEarth(scene) {
         vec3 normal = normalize(vNormal);
         vec3 sunDir = normalize(uSunDirection);
 
-        // Sun-facing factor: 1 = fully lit, 0 = terminator, -1 = fully dark
-        float NdotL = dot(normal, sunDir);
+        // Sample normal map and perturb the surface normal
+        vec3 mapN = texture2D(uNormalMap, vUv).rgb * 2.0 - 1.0;
+        mapN.xy *= uNormalStrength;
+        mapN = normalize(mapN);
+
+        // Build TBN matrix from screen-space derivatives
+        vec3 dp1 = dFdx(vPosition);
+        vec3 dp2 = dFdy(vPosition);
+        vec2 duv1 = dFdx(vUv);
+        vec2 duv2 = dFdy(vUv);
+
+        vec3 dp2perp = cross(dp2, normal);
+        vec3 dp1perp = cross(normal, dp1);
+        vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+        vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+
+        float invmax = inversesqrt(max(dot(T, T), dot(B, B)));
+        mat3 TBN = mat3(T * invmax, B * invmax, normal);
+
+        vec3 perturbedNormal = normalize(TBN * mapN);
+
+        // Sun-facing factor using perturbed normal
+        float NdotL = dot(perturbedNormal, sunDir);
 
         // Day/night blend with soft terminator band
         float dayFactor = smoothstep(-0.15, 0.25, NdotL);
@@ -85,6 +110,10 @@ export function createEarth(scene) {
     earthUniforms.uNightMap.value = texture;
   });
 
+  textureLoader.load(`${BASE}textures/earth-normal.jpg`, (texture) => {
+    earthUniforms.uNormalMap.value = texture;
+  });
+
   // Placeholder textures while loading (dark blue for day, black for night)
   const placeholderDay = new THREE.DataTexture(
     new Uint8Array([10, 21, 32, 255]), 1, 1, THREE.RGBAFormat
@@ -97,6 +126,12 @@ export function createEarth(scene) {
   );
   placeholderNight.needsUpdate = true;
   earthUniforms.uNightMap.value = placeholderNight;
+
+  const placeholderNormal = new THREE.DataTexture(
+    new Uint8Array([128, 128, 255, 255]), 1, 1, THREE.RGBAFormat
+  );
+  placeholderNormal.needsUpdate = true;
+  earthUniforms.uNormalMap.value = placeholderNormal;
 
   // ── Wireframe grid ────────────────────────────────────────────────────────
   const gridGeometry = new THREE.SphereGeometry(
