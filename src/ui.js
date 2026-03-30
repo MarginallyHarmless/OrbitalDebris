@@ -592,6 +592,54 @@ export function createUI(state, particleSystems, controls, propagator) {
 
   content.appendChild(sourceDiv);
 
+  // ── Audio toggle ────────────────────────────────────────────────────────────
+  const audio = new Audio('./orbitBG.mp3');
+  audio.loop = true;
+  audio.volume = 0.4;
+  let audioPlaying = false;
+  let audioStarted = false;
+
+  const audioBtn = document.createElement('div');
+  baseStyle(audioBtn);
+  audioBtn.style.cursor = 'pointer';
+  audioBtn.style.padding = '4px 0';
+  audioBtn.style.fontSize = '11px';
+  audioBtn.style.transition = 'opacity 0.15s';
+  audioBtn.style.opacity = '0.5';
+
+  function updateAudioBtn() {
+    if (audioPlaying) {
+      audioBtn.innerHTML = '<span style="color:#00e5ff">♫</span>  Mute';
+      audioBtn.style.opacity = '0.8';
+    } else {
+      audioBtn.innerHTML = '<span style="color:#00e5ff">♫</span>  Unmute';
+      audioBtn.style.opacity = '0.5';
+    }
+  }
+  updateAudioBtn();
+
+  audioBtn.addEventListener('click', () => {
+    if (!audioStarted) {
+      audio.play().then(() => {
+        audioStarted = true;
+        audioPlaying = true;
+        updateAudioBtn();
+      }).catch(() => {});
+    } else {
+      audioPlaying = !audioPlaying;
+      if (audioPlaying) {
+        audio.play();
+      } else {
+        audio.pause();
+      }
+      updateAudioBtn();
+    }
+  });
+
+  content.appendChild(audioBtn);
+
+  content.appendChild(createDivider());
+
   // ── Kessler toggle hint ────────────────────────────────────────────────────
   const kesslerHint = document.createElement('div');
   baseStyle(kesslerHint);
