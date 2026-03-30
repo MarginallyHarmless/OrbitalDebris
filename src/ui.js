@@ -596,8 +596,7 @@ export function createUI(state, particleSystems, controls, propagator) {
   const audio = new Audio('./orbitBG.mp3');
   audio.loop = true;
   audio.volume = 0.4;
-  let audioPlaying = false;
-  let audioStarted = false;
+  let audioPlaying = true;
 
   const audioBtn = document.createElement('div');
   baseStyle(audioBtn);
@@ -605,7 +604,6 @@ export function createUI(state, particleSystems, controls, propagator) {
   audioBtn.style.padding = '4px 0';
   audioBtn.style.fontSize = '11px';
   audioBtn.style.transition = 'opacity 0.15s';
-  audioBtn.style.opacity = '0.5';
 
   function updateAudioBtn() {
     if (audioPlaying) {
@@ -618,22 +616,26 @@ export function createUI(state, particleSystems, controls, propagator) {
   }
   updateAudioBtn();
 
+  // Autoplay — browsers may block this, so retry on first user interaction
+  const tryPlay = () => audio.play().catch(() => {
+    const resume = () => {
+      audio.play();
+      document.removeEventListener('click', resume);
+      document.removeEventListener('keydown', resume);
+    };
+    document.addEventListener('click', resume, { once: false });
+    document.addEventListener('keydown', resume, { once: false });
+  });
+  tryPlay();
+
   audioBtn.addEventListener('click', () => {
-    if (!audioStarted) {
-      audio.play().then(() => {
-        audioStarted = true;
-        audioPlaying = true;
-        updateAudioBtn();
-      }).catch(() => {});
+    audioPlaying = !audioPlaying;
+    if (audioPlaying) {
+      audio.play();
     } else {
-      audioPlaying = !audioPlaying;
-      if (audioPlaying) {
-        audio.play();
-      } else {
-        audio.pause();
-      }
-      updateAudioBtn();
+      audio.pause();
     }
+    updateAudioBtn();
   });
 
   content.appendChild(audioBtn);
