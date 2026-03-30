@@ -201,7 +201,7 @@ export function createUI(state, particleSystems, controls, propagator) {
   // Audio mute toggle
   const audio = new Audio('./orbitBG.mp3');
   audio.loop = true;
-  audio.volume = 0.4;
+  audio.volume = 0.2;
   let audioPlaying = true;
 
   const audioBtn = document.createElement('div');
